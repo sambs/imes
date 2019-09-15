@@ -1,0 +1,24 @@
+{
+  "name": "imes",
+  "description": "In-memory event sourcing",
+  "version": "0.0.1",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "id": "node scripts/id.js",
+    "build": "tsc",
+    "prettify": "prettier --write 'src/**/*.ts'",
+    "test": "tape -r source-map-support/register dist/**/__tests__/*.js"
+  },
+  "dependencies": {
+    "ndjson": "^1.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^12.7.4",
+    "prettier": "^1.18.2",
+    "source-map-support": "^0.5.13",
+    "tape": "^4.11.0",
+    "typescript": "^3.5.3"
+  }
+}
