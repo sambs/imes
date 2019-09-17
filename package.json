@@ -12,6 +12,17 @@
     "prettify": "prettier --write 'src/**/*.ts'",
     "test": "tape -r source-map-support/register dist/**/__tests__/*.js"
   },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "prettier --write",
+      "git add"
+    ]
+  },
   "dependencies": {
     "@types/uuid": "^3.4.5",
     "graphql-subscriptions": "^1.1.0",
@@ -20,6 +31,8 @@
   },
   "devDependencies": {
     "@types/node": "^12.7.4",
+    "husky": "^3.0.5",
+    "lint-staged": "^9.2.5",
     "prettier": "^1.18.2",
     "rimraf": "^3.0.0",
     "source-map-support": "^0.5.13",
