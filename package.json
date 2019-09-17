@@ -13,7 +13,10 @@
     "test": "tape -r source-map-support/register dist/**/__tests__/*.js"
   },
   "dependencies": {
-    "ndjson": "^1.5.0"
+    "@types/uuid": "^3.4.5",
+    "graphql-subscriptions": "^1.1.0",
+    "ndjson": "^1.5.0",
+    "uuid": "^3.3.3"
   },
   "devDependencies": {
     "@types/node": "^12.7.4",
