@@ -6,7 +6,7 @@ Events are source of truth within the system. They contain facts - information a
 
 ### Projections
 
-State is derived from events by the way of projections. Projections are basically a fold over state and an event: `State => Event => State`. Projections are pure data transformations and cannot interact with any external systems. For example if an exchange rate is needed to derive a price it must be included in the event data not fetched from an api, as rates may change when events are replayed.
+State is derived from events by the way of projections. Projections are basically a fold over state and an event: `(Event, State) => State`. Projections are pure data transformations and cannot interact with any external systems. For example if an exchange rate is needed to derive a price it must be included in the event data not fetched from an api, as rates may change when events are replayed.
 
 ### Commands
 
@@ -17,6 +17,7 @@ A simple command will map one to one with an event, for example a createPost com
 ### Event Handlers
 
 Much like Commands, event handlers can query or call external services and emit further events but do not perform any validation as they do not have the option to reject an event. Sending a confirmation email is an example of something suited to being implemented in an event handler.
+
 ### Event Replay
 
 Events can be replayed when projections are modified, permitting changes to the shape of the application state. Event handlers are not triggered when events are replayed as this would result in unwanted external effects such as emails being sent twice.

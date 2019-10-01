@@ -1,41 +1,38 @@
 import test from 'tape'
-import { Projection } from '../projection'
-import { Event } from '../events'
+import { Projection } from '../index'
 
 interface Post {
-  id: number
+  id: string
   title: string
   score: number
   published: boolean
 }
 
-interface PostCreated extends Event {
-  data: {
-    id: number
+interface Events {
+  PostCreated: {
+    id: string
     title: string
     score: number
   }
-}
 
-interface PostPublished extends Event {
-  data: {
-    id: number
+  PostPublished: {
+    id: string
+  }
+
+  AllPostsPublished: {
+    data: void
   }
 }
 
-interface AllPostsPublished extends Event {
-  data: void
-}
-
-const projection = new Projection<Post>({
+const projection = new Projection<Events, Post>({
   name: 'Post',
-  keyProp: 'id',
-  eventHandlers: {
+  key: 'id',
+  handlers: {
     PostCreated: {
-      transform: ({ data }: PostCreated) => ({ published: false, ...data }),
+      transform: ({ data }) => ({ published: false, ...data }),
     },
     PostPublished: {
-      selectOne: ({ data: { id } }: PostPublished) => id,
+      selectOne: ({ data: { id } }) => id,
       transform: (_, post) => ({ ...post, published: true }),
     },
     AllPostsPublished: {
@@ -46,9 +43,15 @@ const projection = new Projection<Post>({
 })
 
 const nodes = [
-  { id: 1, title: 'Who Ya?', score: 3.4, published: true, __typename: 'Post' },
   {
-    id: 2,
+    id: 'p1',
+    title: 'Who Ya?',
+    score: 3.4,
+    published: true,
+    __typename: 'Post',
+  },
+  {
+    id: 'p2',
     title: 'Whoa Ye!',
     score: 6.2,
     published: false,
@@ -66,10 +69,10 @@ const reset = () => {
 test('projection.get', t => {
   reset()
 
-  t.deepEqual(projection.get(1), nodes[0], 'returns the node by key')
+  t.deepEqual(projection.get('p1'), nodes[0], 'returns the node by key')
 
   t.equal(
-    projection.get(9),
+    projection.get('p9'),
     undefined,
     'returns undefined when there is no node with the specified key'
   )
@@ -90,7 +93,7 @@ test('projection.find', t => {
     projection.find({ first: 1 }),
     {
       nodes: nodes.slice(0, 1),
-      pageInfo: { cursor: 1, hasMore: true },
+      pageInfo: { cursor: 'p1', hasMore: true },
     },
     'with a first parameter limits the number of returned nodes'
   )
@@ -102,7 +105,7 @@ test('projection.find', t => {
   )
 
   t.deepEqual(
-    projection.find({ first: 1, cursor: 1 }),
+    projection.find({ first: 1, cursor: 'p1' }),
     {
       nodes: nodes.slice(1, 2),
       pageInfo: { cursor: null, hasMore: false },
@@ -117,7 +120,7 @@ test('projection.find', t => {
   )
 
   t.throws(
-    () => projection.find({ first: 1, cursor: 9 }),
+    () => projection.find({ first: 1, cursor: 'p9' }),
     'Invalid cursor',
     'with a non existant cursor throws an error'
   )
@@ -139,10 +142,10 @@ test('projection.handleEvent where the handler has a selectOne parameter', t => 
 
   const updatedNodes = projection.handleEvent({
     name: 'PostPublished',
-    data: { id: 2 },
+    data: { id: 'p2' },
   })
   const expectedNode = {
-    id: 2,
+    id: 'p2',
     title: 'Whoa Ye!',
     score: 6.2,
     published: true,
@@ -152,7 +155,7 @@ test('projection.handleEvent where the handler has a selectOne parameter', t => 
   t.deepEqual(updatedNodes, [expectedNode], 'returns an array of updated nodes')
 
   t.deepEqual(
-    projection.nodes[2],
+    projection.nodes['p2'],
     expectedNode,
     'updates the node in the projection store'
   )
@@ -165,7 +168,7 @@ test('projection.handleEvent where the handler has a selectMany parameter', t =>
 
   const updatedNodes = projection.handleEvent({ name: 'AllPostsPublished' })
   const expectedNode = {
-    id: 2,
+    id: 'p2',
     title: 'Whoa Ye!',
     score: 6.2,
     published: true,
@@ -175,7 +178,7 @@ test('projection.handleEvent where the handler has a selectMany parameter', t =>
   t.deepEqual(updatedNodes, [expectedNode], 'returns an array of updated nodes')
 
   t.deepEqual(
-    projection.nodes[2],
+    projection.nodes['p2'],
     expectedNode,
     'updates the node in the projection store'
   )
@@ -188,11 +191,11 @@ test('projection.handleEvent where the handler has neither select parameter', t 
 
   const updatedNodes = projection.handleEvent({
     name: 'PostCreated',
-    data: { id: 3, title: 'Keep It', score: 0 },
+    data: { id: 'p3', title: 'Keep It', score: 0 },
   })
 
   const expectedNode = {
-    id: 3,
+    id: 'p3',
     title: 'Keep It',
     score: 0,
     published: false,
@@ -202,7 +205,7 @@ test('projection.handleEvent where the handler has neither select parameter', t 
   t.deepEqual(updatedNodes, [expectedNode], 'returns an array of updated nodes')
 
   t.deepEqual(
-    projection.nodes[3],
+    projection.nodes['p3'],
     expectedNode,
     'adds the node to the projection store'
   )

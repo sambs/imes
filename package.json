@@ -7,7 +7,7 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "npm run clean && tsc",
-    "clean": "rimraf build/*",
+    "clean": "rimraf dist/*",
     "prepublish": "npm run build",
     "prettify": "prettier --write 'src/**/*.ts'",
     "test": "tape -r source-map-support/register dist/**/__tests__/*.js"

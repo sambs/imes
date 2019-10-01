@@ -1,3 +1,2 @@
-export * from './events'
-export * from './projection'
+export * from './app'
 export * from './streams'

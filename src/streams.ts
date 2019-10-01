@@ -1,13 +1,12 @@
-import { createReadStream, createWriteStream } from 'fs'
-import { Readable, Writable } from 'stream'
+import { createReadStream, promises } from 'fs'
+import { Readable } from 'stream'
 import ldj from 'ndjson'
 
 export const createFileReader = (path: string): Readable =>
   createReadStream(path, { encoding: 'utf8' }).pipe(ldj.parse())
 
-export const createFileWriter = (path: string): Writable => {
-  const stream = ldj.serialize()
-  const file = createWriteStream(path, { flags: 'a' })
-  stream.pipe(file)
-  return stream
+export const createWriteToFile = (path: string) => (
+  event: any
+): Promise<void> => {
+  return promises.appendFile(path, JSON.stringify(event))
 }

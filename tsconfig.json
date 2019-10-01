@@ -5,7 +5,9 @@
     "allowSyntheticDefaultImports": true,
     "declaration": true,
     "target": "es2019",
-    "lib": ["es2018"],
+    "lib": [
+      "es2018"
+    ],
     "noImplicitAny": false,
     "moduleResolution": "node",
     "sourceMap": true,
@@ -20,6 +22,5 @@
   "include": [
     "src/**/*"
   ],
-  "exclude": [
-  ]
+  "exclude": []
 }
