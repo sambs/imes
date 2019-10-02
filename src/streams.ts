@@ -8,5 +8,5 @@ export const createFileReader = (path: string): Readable =>
 export const createWriteToFile = (path: string) => (
   event: any
 ): Promise<void> => {
-  return promises.appendFile(path, JSON.stringify(event))
+  return promises.appendFile(path, JSON.stringify(event) + '\n')
 }
