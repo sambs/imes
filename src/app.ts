@@ -19,6 +19,7 @@ export type Listener<Events, Name extends EventName<Events>> = (
 
 export interface ImesOptions<Projections> {
   projections: Projections
+  writeEvent?(event: any): Promise<void>
 }
 
 export class Imes<Events, Projections> {
@@ -26,10 +27,11 @@ export class Imes<Events, Projections> {
   _pubsub: PubSub
   store: Projections
 
-  constructor({ projections }: ImesOptions<Projections>) {
+  constructor({ projections, writeEvent }: ImesOptions<Projections>) {
+    if (writeEvent) this.writeEvent = writeEvent
     this._listeners = {}
-    this.store = projections
     this._pubsub = new PubSub()
+    this.store = projections
   }
 
   id(): string {
