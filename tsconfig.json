@@ -9,6 +9,7 @@
       "es2018"
     ],
     "noImplicitAny": false,
+    "strictNullChecks": true,
     "moduleResolution": "node",
     "sourceMap": true,
     "outDir": "dist",

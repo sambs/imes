@@ -55,7 +55,7 @@ export class Imes<Events, Projections> {
 
     if (this._listeners[name]) {
       process.nextTick(() => {
-        this._listeners[name].forEach(listener => listener(event))
+        this._listeners[name]!.forEach(listener => listener(event))
       })
     }
 
@@ -78,7 +78,7 @@ export class Imes<Events, Projections> {
     listener: Listener<Events, Name>
   ): void {
     this._listeners[name] = this._listeners[name] || []
-    this._listeners[name].push(listener)
+    this._listeners[name]!.push(listener)
   }
 
   asyncIterator<T>(event: string): AsyncIterator<T> {
@@ -109,7 +109,7 @@ export interface Query {
 }
 
 export interface PageInfo {
-  cursor?: string
+  cursor: string | null
   hasMore: boolean
 }
 
@@ -118,11 +118,24 @@ export interface Connection<Node> {
   pageInfo: PageInfo
 }
 
-export interface Handler<Events, Node, Name extends EventName<Events>> {
-  transform: (event: Event<Events, Name>, node?: Node) => Node
-  selectOne?: (event: Event<Events, Name>) => string | number
-  selectMany?: (event: Event<Events, Name>) => { [prop: string]: any }
+export interface NewHandler<Events, Node, Name extends EventName<Events>> {
+  transform: (event: Event<Events, Name>) => Node
 }
+
+export interface SingleHandler<Events, Node, Name extends EventName<Events>> {
+  selectOne: (event: Event<Events, Name>) => string | number
+  transform: (event: Event<Events, Name>, node: Node) => Node
+}
+
+export interface ManyHandler<Events, Node, Name extends EventName<Events>> {
+  selectMany: (event: Event<Events, Name>) => { [prop: string]: any }
+  transform: (event: Event<Events, Name>, node: Node) => Node
+}
+
+export type Handler<Events, Node, Name extends EventName<Events>> =
+  | NewHandler<Events, Node, Name>
+  | SingleHandler<Events, Node, Name>
+  | ManyHandler<Events, Node, Name>
 
 export interface ProjectionOptions<Events, Node> {
   name: string
@@ -155,7 +168,7 @@ export class Projection<Events, Node> {
     if (query.filter) {
       nodes = Object.keys(query.filter).reduce(
         (nodes, prop) =>
-          nodes.filter(node => node[prop] === query.filter[prop]),
+          nodes.filter(node => node[prop] === query.filter![prop]),
         nodes
       )
     }
@@ -176,9 +189,9 @@ export class Projection<Events, Node> {
       }
     }
 
-    if ('first' in query && nodes.length > query.first) {
+    if ('first' in query && nodes.length > query.first!) {
       hasMore = true
-      cursor = nodes[query.first - 1][this.key]
+      cursor = nodes[query.first! - 1][this.key]
       nodes = nodes.slice(0, query.first)
     }
 
@@ -190,7 +203,7 @@ export class Projection<Events, Node> {
 
     const { selectOne, selectMany, transform } = this.handlers[event.name]
 
-    let nodes: Node[]
+    let nodes: Node[] = []
 
     if (selectOne) {
       nodes = [this.get(selectOne(event))]
@@ -198,7 +211,7 @@ export class Projection<Events, Node> {
       nodes = this.find({ filter: selectMany(event) }).nodes
     }
 
-    if (nodes) {
+    if (nodes.length) {
       nodes = nodes.map(node => transform(event, node))
     } else {
       nodes = [transform(event)]
