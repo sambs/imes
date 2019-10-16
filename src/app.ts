@@ -118,24 +118,32 @@ export interface Connection<Node> {
   pageInfo: PageInfo
 }
 
-export interface NewHandler<Events, Node, Name extends EventName<Events>> {
-  transform: (event: Event<Events, Name>) => Node
+export interface InitHandler<Events, Node, Name extends EventName<Events>> {
+  init: (event: Event<Events, Name>) => Node
 }
 
-export interface SingleHandler<Events, Node, Name extends EventName<Events>> {
+export interface SingleTransformHandler<
+  Events,
+  Node,
+  Name extends EventName<Events>
+> {
   selectOne: (event: Event<Events, Name>) => string | number
   transform: (event: Event<Events, Name>, node: Node) => Node
 }
 
-export interface ManyHandler<Events, Node, Name extends EventName<Events>> {
+export interface ManyTransformHandler<
+  Events,
+  Node,
+  Name extends EventName<Events>
+> {
   selectMany: (event: Event<Events, Name>) => { [prop: string]: any }
   transform: (event: Event<Events, Name>, node: Node) => Node
 }
 
 export type Handler<Events, Node, Name extends EventName<Events>> =
-  | NewHandler<Events, Node, Name>
-  | SingleHandler<Events, Node, Name>
-  | ManyHandler<Events, Node, Name>
+  | InitHandler<Events, Node, Name>
+  | SingleTransformHandler<Events, Node, Name>
+  | ManyTransformHandler<Events, Node, Name>
 
 export interface ProjectionOptions<Events, Node> {
   name: string
@@ -201,20 +209,19 @@ export class Projection<Events, Node> {
   handleEvent(event): Node[] {
     if (!this.handlers[event.name]) return []
 
-    const { selectOne, selectMany, transform } = this.handlers[event.name]
+    const { selectOne, selectMany, transform, init } = this.handlers[event.name]
 
-    let nodes: Node[] = []
+    let nodes: Node[]
 
-    if (selectOne) {
-      nodes = [this.get(selectOne(event))]
-    } else if (selectMany) {
-      nodes = this.find({ filter: selectMany(event) }).nodes
-    }
-
-    if (nodes.length) {
-      nodes = nodes.map(node => transform(event, node))
+    if (init) {
+      nodes = [init(event)]
     } else {
-      nodes = [transform(event)]
+      if (selectOne) {
+        nodes = [this.get(selectOne(event))]
+      } else if (selectMany) {
+        nodes = this.find({ filter: selectMany(event) }).nodes
+      }
+      nodes = nodes!.map(node => transform(event, node))
     }
 
     nodes = nodes.map(node =>

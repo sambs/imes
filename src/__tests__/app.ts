@@ -29,7 +29,7 @@ const projection = new Projection<Events, Post>({
   key: 'id',
   handlers: {
     PostCreated: {
-      transform: ({ data }) => ({ published: false, ...data }),
+      init: ({ data }) => ({ published: false, ...data }),
     },
     PostPublished: {
       selectOne: ({ data: { id } }) => id,
