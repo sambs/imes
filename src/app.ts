@@ -10,7 +10,11 @@ export type Event<Events, Name extends EventName<Events>> = {
   id: string
   time: string
   data: EventData<Events, Name>
-  updatedNodes?: any[]
+}
+
+export interface ResolvedEvent<Events, Name extends EventName<Events>>
+  extends Event<Events, Name> {
+  updatedNodes: any[]
 }
 
 export type Listener<Events, Name extends EventName<Events>> = (
@@ -45,7 +49,7 @@ export class Imes<Events, Projections> {
   async emit<Name extends EventName<Events>>(
     name: Name,
     data: EventData<Events, Name>
-  ): Promise<Event<Events, Name>> {
+  ): Promise<ResolvedEvent<Events, Name>> {
     const event: Event<Events, Name> = {
       id: this.id(),
       time: this.now(),
@@ -61,12 +65,15 @@ export class Imes<Events, Projections> {
 
     await this.writeEvent(event)
 
-    event.updatedNodes = this._updateProjections(event)
+    const resolved: ResolvedEvent<Events, Name> = {
+      ...event,
+      updatedNodes: this._updateProjections(event),
+    }
 
-    this._pubsub.publish('*', { event })
-    this._pubsub.publish(name.toString(), { [name]: event })
+    this._pubsub.publish('*', { event: resolved })
+    this._pubsub.publish(name.toString(), { [name]: resolved })
 
-    return event
+    return resolved
   }
 
   writeEvent(event: any): Promise<void> {
