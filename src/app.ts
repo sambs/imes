@@ -57,12 +57,6 @@ export class Imes<Events, Projections> {
       data,
     }
 
-    if (this._listeners[name]) {
-      process.nextTick(() => {
-        this._listeners[name]!.forEach(listener => listener(event))
-      })
-    }
-
     await this.writeEvent(event)
 
     const resolved: ResolvedEvent<Events, Name> = {
@@ -70,8 +64,13 @@ export class Imes<Events, Projections> {
       updatedNodes: this._updateProjections(event),
     }
 
-    this._pubsub.publish('*', { event: resolved })
-    this._pubsub.publish(name.toString(), { [name]: resolved })
+    process.nextTick(() => {
+      if (this._listeners[name]) {
+        this._listeners[name]!.forEach(listener => listener(event))
+      }
+      this._pubsub.publish('*', { event: resolved })
+      this._pubsub.publish(name.toString(), { [name]: resolved })
+    })
 
     return resolved
   }
