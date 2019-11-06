@@ -42,34 +42,44 @@ const projection = new Projection<Events, Post>({
   },
 })
 
-const nodes = [
+const edges = [
   {
-    id: 'p1',
-    title: 'Who Ya?',
-    score: 3.4,
-    published: true,
-    __typename: 'Post',
+    createdAt: 'yesterday',
+    eventIds: ['e1'],
+    node: {
+      id: 'p1',
+      title: 'Who Ya?',
+      score: 3.4,
+      published: true,
+    },
+    typename: 'Post',
+    updatedAt: 'yesterday',
   },
   {
-    id: 'p2',
-    title: 'Whoa Ye!',
-    score: 6.2,
-    published: false,
-    __typename: 'Post',
+    createdAt: 'yesterday',
+    eventIds: ['e2'],
+    node: {
+      id: 'p2',
+      title: 'Whoa Ye!',
+      score: 6.2,
+      published: false,
+    },
+    typename: 'Post',
+    updatedAt: 'yesterday',
   },
 ]
 
 const reset = () => {
-  projection.nodes = {}
-  nodes.forEach(node => {
-    projection.nodes[node.id] = node
+  projection.edges = {}
+  edges.forEach(edge => {
+    projection.edges[edge.node.id] = edge
   })
 }
 
 test('projection.get', t => {
   reset()
 
-  t.deepEqual(projection.get('p1'), nodes[0], 'returns the node by key')
+  t.deepEqual(projection.get('p1'), edges[0], 'returns the edge by key')
 
   t.equal(
     projection.get('p9'),
@@ -85,32 +95,32 @@ test('projection.find', t => {
 
   t.deepEqual(
     projection.find(),
-    { nodes, pageInfo: { cursor: null, hasMore: false } },
-    'without a query returns all nodes'
+    { edges, pageInfo: { cursor: null, hasMore: false } },
+    'without a query returns all edges'
   )
 
   t.deepEqual(
     projection.find({ first: 1 }),
     {
-      nodes: nodes.slice(0, 1),
+      edges: edges.slice(0, 1),
       pageInfo: { cursor: 'p1', hasMore: true },
     },
-    'with a first parameter limits the number of returned nodes'
+    'with a first parameter limits the number of returned edges'
   )
 
   t.deepEqual(
     projection.find({ first: 5 }),
-    { nodes, pageInfo: { cursor: null, hasMore: false } },
-    'with a first parameter greater than the amount of nodes returns all nodes'
+    { edges, pageInfo: { cursor: null, hasMore: false } },
+    'with a first parameter greater than the amount of edges returns all edges'
   )
 
   t.deepEqual(
     projection.find({ first: 1, cursor: 'p1' }),
     {
-      nodes: nodes.slice(1, 2),
+      edges: edges.slice(1, 2),
       pageInfo: { cursor: null, hasMore: false },
     },
-    'with a cursor skips nodes until after the cursor'
+    'with a cursor skips edges until after the cursor'
   )
 
   t.throws(
@@ -128,85 +138,110 @@ test('projection.find', t => {
   t.deepEqual(
     projection.find({ filter: { title: 'Who Ya?' } }),
     {
-      nodes: [nodes[0]],
+      edges: [edges[0]],
       pageInfo: { cursor: null, hasMore: false },
     },
-    'with a filter parameter filters the returned nodes'
+    'with a filter parameter filters the returned edges'
   )
 
   t.end()
 })
 
-test('projection.handleEvent where the handler has a selectOne parameter', t => {
+test('projection.handleEvent with a SingleTransformHandler', t => {
   reset()
 
-  const updatedNodes = projection.handleEvent({
+  const updatedEdges = projection.handleEvent({
+    id: 'e3',
     name: 'PostPublished',
     data: { id: 'p2' },
+    time: 'now',
   })
-  const expectedNode = {
-    id: 'p2',
-    title: 'Whoa Ye!',
-    score: 6.2,
-    published: true,
-    __typename: 'Post',
+
+  const expectedEdge = {
+    createdAt: 'yesterday',
+    eventIds: ['e2', 'e3'],
+    node: {
+      id: 'p2',
+      title: 'Whoa Ye!',
+      score: 6.2,
+      published: true,
+    },
+    typename: 'Post',
+    updatedAt: 'now',
   }
 
-  t.deepEqual(updatedNodes, [expectedNode], 'returns an array of updated nodes')
+  t.deepEqual(updatedEdges, [expectedEdge], 'returns an array of updated edges')
 
   t.deepEqual(
-    projection.nodes['p2'],
-    expectedNode,
+    projection.edges['p2'],
+    expectedEdge,
     'updates the node in the projection store'
   )
 
   t.end()
 })
 
-test('projection.handleEvent where the handler has a selectMany parameter', t => {
+test('projection.handleEvent with a ManyTransformHandler', t => {
   reset()
 
-  const updatedNodes = projection.handleEvent({ name: 'AllPostsPublished' })
-  const expectedNode = {
-    id: 'p2',
-    title: 'Whoa Ye!',
-    score: 6.2,
-    published: true,
-    __typename: 'Post',
+  const updatedEdges = projection.handleEvent({
+    id: 'e3',
+    name: 'AllPostsPublished',
+    time: 'now',
+  })
+
+  const expectedEdge = {
+    createdAt: 'yesterday',
+    eventIds: ['e2', 'e3'],
+    node: {
+      id: 'p2',
+      title: 'Whoa Ye!',
+      score: 6.2,
+      published: true,
+    },
+    typename: 'Post',
+    updatedAt: 'now',
   }
 
-  t.deepEqual(updatedNodes, [expectedNode], 'returns an array of updated nodes')
+  t.deepEqual(updatedEdges, [expectedEdge], 'returns an array of updated edges')
 
   t.deepEqual(
-    projection.nodes['p2'],
-    expectedNode,
+    projection.edges['p2'],
+    expectedEdge,
     'updates the node in the projection store'
   )
 
   t.end()
 })
 
-test('projection.handleEvent where the handler has neither select parameter', t => {
+test('projection.handleEvent with an InitHandler', t => {
   reset()
 
-  const updatedNodes = projection.handleEvent({
+  const updatedEdges = projection.handleEvent({
+    id: 'e3',
     name: 'PostCreated',
     data: { id: 'p3', title: 'Keep It', score: 0 },
+    time: 'now',
   })
 
-  const expectedNode = {
-    id: 'p3',
-    title: 'Keep It',
-    score: 0,
-    published: false,
-    __typename: 'Post',
+  const expectedEdge = {
+    createdAt: 'now',
+    eventIds: ['e3'],
+    node: {
+      id: 'p3',
+      title: 'Keep It',
+      score: 0,
+      published: false,
+    },
+    typename: 'Post',
+    updatedAt: 'now',
   }
 
-  t.deepEqual(updatedNodes, [expectedNode], 'returns an array of updated nodes')
+  t.deepEqual(updatedEdges, [expectedEdge], 'returns an array of updated edges')
 
   t.deepEqual(
-    projection.nodes['p3'],
-    expectedNode,
+    projection.edges['p3'],
+    expectedEdge,
     'adds the node to the projection store'
   )
 

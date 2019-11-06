@@ -1,6 +1,6 @@
 import { PubSub } from 'graphql-subscriptions'
 import uuid from 'uuid'
-import { Readable, Writable } from 'stream'
+import { Readable } from 'stream'
 
 export type EventName<Events> = keyof Events
 export type EventData<Events, Name extends EventName<Events>> = Events[Name]
@@ -14,7 +14,7 @@ export type Event<Events, Name extends EventName<Events>> = {
 
 export interface ResolvedEvent<Events, Name extends EventName<Events>>
   extends Event<Events, Name> {
-  updatedNodes: any[]
+  updatedEdges: any[]
 }
 
 export type Listener<Events, Name extends EventName<Events>> = (
@@ -61,7 +61,7 @@ export class Imes<Events, Projections> {
 
     const resolved: ResolvedEvent<Events, Name> = {
       ...event,
-      updatedNodes: this._updateProjections(event),
+      updatedEdges: this._updateProjections(event),
     }
 
     process.nextTick(() => {
@@ -103,7 +103,8 @@ export class Imes<Events, Projections> {
   _updateProjections<Name extends keyof Events>(event: Event<Events, Name>) {
     return Object.keys(this.store).reduce((updatedNodes, key) => {
       const projection = this.store[key]
-      return updatedNodes.concat(projection.handleEvent(event))
+      const nodes = projection.handleEvent(event, this)
+      return updatedNodes.concat(nodes)
     }, [])
   }
 }
@@ -120,7 +121,7 @@ export interface PageInfo {
 }
 
 export interface Connection<Node> {
-  nodes: Node[]
+  edges: Edge<Node>[]
   pageInfo: PageInfo
 }
 
@@ -151,6 +152,14 @@ export type Handler<Events, Node, Name extends EventName<Events>> =
   | SingleTransformHandler<Events, Node, Name>
   | ManyTransformHandler<Events, Node, Name>
 
+export interface Edge<Node> {
+  createdAt: string
+  eventIds: string[]
+  node: Node
+  typename: string
+  updatedAt: string
+}
+
 export interface ProjectionOptions<Events, Node> {
   name: string
   key: string
@@ -161,29 +170,29 @@ export class Projection<Events, Node> {
   name: string
   key: string
   handlers: { [Key in EventName<Events>]?: Handler<Events, Node, Key> }
-  nodes: { [key: string]: Node }
+  edges: { [key: string]: Edge<Node> }
 
   constructor({ name, key, handlers }: ProjectionOptions<Events, Node>) {
     this.name = name
     this.key = key
     this.handlers = handlers
-    this.nodes = {}
+    this.edges = {}
   }
 
-  get(key: string): Node {
-    return this.nodes[key]
+  get(key: string): Edge<Node> {
+    return this.edges[key]
   }
 
   find(query: Query = {}): Connection<Node> {
     let cursor = null
     let hasMore = false
-    let nodes = Object.values(this.nodes)
+    let edges = Object.values(this.edges)
 
     if (query.filter) {
-      nodes = Object.keys(query.filter).reduce(
-        (nodes, prop) =>
-          nodes.filter(node => node[prop] === query.filter![prop]),
-        nodes
+      edges = Object.keys(query.filter).reduce(
+        (edges, prop) =>
+          edges.filter(edge => edge.node[prop] === query.filter![prop]),
+        edges
       )
     }
 
@@ -191,11 +200,11 @@ export class Projection<Events, Node> {
       const lastKey = query.cursor
       let found = false
 
-      while (!found && nodes.length) {
-        if (nodes[0][this.key] === lastKey) {
+      while (!found && edges.length) {
+        if (edges[0].node[this.key] === lastKey) {
           found = true
         }
-        nodes.shift()
+        edges.shift()
       }
 
       if (!found) {
@@ -203,42 +212,51 @@ export class Projection<Events, Node> {
       }
     }
 
-    if ('first' in query && nodes.length > query.first!) {
+    if ('first' in query && edges.length > query.first!) {
       hasMore = true
-      cursor = nodes[query.first! - 1][this.key]
-      nodes = nodes.slice(0, query.first)
+      cursor = edges[query.first! - 1].node[this.key]
+      edges = edges.slice(0, query.first)
     }
 
-    return { nodes, pageInfo: { hasMore, cursor } }
+    return { edges, pageInfo: { hasMore, cursor } }
   }
 
-  handleEvent(event): Node[] {
+  handleEvent(event): Edge<Node>[] {
     if (!this.handlers[event.name]) return []
 
     const { selectOne, selectMany, transform, init } = this.handlers[event.name]
 
-    let nodes: Node[]
+    let edges: Edge<Node>[]
 
     if (init) {
-      nodes = [init(event)]
+      edges = [
+        {
+          createdAt: event.time,
+          eventIds: [event.id],
+          node: init(event),
+          typename: this.name,
+          updatedAt: event.time,
+        },
+      ]
     } else {
       if (selectOne) {
-        nodes = [this.get(selectOne(event))]
+        edges = [this.get(selectOne(event))]
       } else if (selectMany) {
-        nodes = this.find({ filter: selectMany(event) }).nodes
+        edges = this.find({ filter: selectMany(event) }).edges
       }
-      nodes = nodes!.map(node => transform(event, node))
+      edges = edges!.map(edge => ({
+        ...edge,
+        node: transform(event, edge.node),
+        updatedAt: event.time,
+        eventIds: [...edge.eventIds, event.id],
+      }))
     }
 
-    nodes = nodes.map(node =>
-      Object.assign({}, node, { __typename: this.name })
-    )
-
-    nodes.forEach(node => {
-      const key = node[this.key]
-      this.nodes[key] = node
+    edges.forEach(edge => {
+      const key = edge.node[this.key]
+      this.edges[key] = edge
     })
 
-    return nodes
+    return edges
   }
 }
