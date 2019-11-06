@@ -29,12 +29,14 @@ export interface ImesOptions<Projections> {
 export class Imes<Events, Projections> {
   _listeners: { [Name in EventName<Events>]?: Listener<Events, Name>[] }
   _pubsub: PubSub
+  events: { [id: string]: Event<Events, EventName<Events>> }
   store: Projections
 
   constructor({ projections, writeEvent }: ImesOptions<Projections>) {
     if (writeEvent) this.writeEvent = writeEvent
     this._listeners = {}
     this._pubsub = new PubSub()
+    this.events = {}
     this.store = projections
   }
 
@@ -56,6 +58,8 @@ export class Imes<Events, Projections> {
       name,
       data,
     }
+
+    this.events[event.id] = event
 
     await this.writeEvent(event)
 
@@ -94,7 +98,10 @@ export class Imes<Events, Projections> {
   load(events: Readable): Promise<void> {
     return new Promise((resolve, reject) =>
       events
-        .on('data', event => this._updateProjections(event))
+        .on('data', event => {
+          this.events[event.id] = event
+          this._updateProjections(event)
+        })
         .on('error', reject)
         .on('end', resolve)
     )
