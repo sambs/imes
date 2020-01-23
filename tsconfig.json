@@ -8,8 +8,7 @@
     "lib": [
       "es2018"
     ],
-    "noImplicitAny": false,
-    "strictNullChecks": true,
+    "strict": true,
     "moduleResolution": "node",
     "sourceMap": true,
     "outDir": "dist",
@@ -21,7 +20,8 @@
     }
   },
   "include": [
-    "src/**/*"
+    "src/**/*.ts",
+    "test/**/*.ts"
   ],
   "exclude": []
 }

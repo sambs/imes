@@ -3,14 +3,15 @@
   "description": "In-memory event sourcing",
   "version": "0.3.0",
   "license": "MIT",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
   "scripts": {
     "build": "npm run clean && tsc",
     "clean": "rimraf dist/*",
     "prepublish": "npm run build",
     "prettify": "prettier --write 'src/**/*.ts'",
-    "test": "tape -r source-map-support/register dist/**/__tests__/*.js"
+    "test": "tape -r ts-node/register test/**/*.ts",
+    "test-w": "onchange -i 'src/**/*.ts' -- yarn test"
   },
   "husky": {
     "hooks": {
@@ -24,19 +25,20 @@
     ]
   },
   "dependencies": {
-    "@types/uuid": "^3.4.5",
-    "graphql-subscriptions": "^1.1.0",
-    "ndjson": "^1.5.0",
-    "uuid": "^3.3.3"
+    "deep-equal": "^2.0.1",
+    "fp-ts": "^2.4.1"
   },
   "devDependencies": {
+    "@types/deep-equal": "^1.0.1",
     "@types/node": "^12.7.4",
+    "@types/tape": "^4.2.33",
     "husky": "^3.0.5",
     "lint-staged": "^9.2.5",
     "prettier": "^1.18.2",
     "rimraf": "^3.0.0",
     "source-map-support": "^0.5.13",
     "tape": "^4.11.0",
+    "ts-node": "^8.6.2",
     "typescript": "^3.5.3"
   }
 }
