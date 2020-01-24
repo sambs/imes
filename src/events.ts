@@ -18,15 +18,18 @@ export interface ResolvedEvent<E, M extends EventName<E> = EventName<E>>
   updatedEdges: any[]
 }
 
-export interface Emitter<E, K> {
+export interface EventEmitter<E> {
   emit<M extends EventName<E>>(
     name: M,
     data: EventData<E, M>
   ): Promise<ResolvedEvent<E, M>>
-  store: EventStore<E, K>
 }
 
 export type EventStore<E, K> = Store<Event<E, EventName<E>>, K>
+
+export interface EventStorer<E, K> {
+  store: EventStore<E, K>
+}
 
 export interface IdGenerator {
   (): string
@@ -56,7 +59,7 @@ export interface EventsOptions<E, K> {
   store: EventStore<E, K>
 }
 
-export class Events<E, K> implements Emitter<E, K> {
+export class Events<E, K> implements EventEmitter<E>, EventStorer<E, K> {
   generateId: IdGenerator
   getTime: GetTime
   postEmit?: PostEmit<E>
