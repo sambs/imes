@@ -7,7 +7,12 @@ interface User {
 }
 
 type UserKey = string
-type UserQuery = Query<UserKey>
+
+interface UserQuery extends Query<UserKey> {
+  filter?: {
+    name?: string
+  }
+}
 
 const getItemKey = (user: User) => user.id
 
@@ -23,6 +28,11 @@ const user2: User = {
 
 const store = new InMemoryStore<User, UserKey, UserQuery>({
   getItemKey,
+  getFilterPredicates: function*({ filter }) {
+    if (filter && filter.name !== undefined) {
+      yield item => item.name == filter.name
+    }
+  },
   items: [user1, user2],
 })
 
@@ -39,7 +49,7 @@ test('InMemoryStore.read', async t => {
 })
 
 test('InMemoryStore.find', async t => {
-  t.plan(4)
+  t.plan(5)
 
   t.deepEqual(
     await store.find({}),
@@ -66,4 +76,10 @@ test('InMemoryStore.find', async t => {
       'errors when a provided cursor is invalid'
     )
   })
+
+  t.deepEqual(
+    await store.find({ filter: { name: 'Trevor' } }),
+    { items: [user1], cursor: null },
+    'uses the filterPredicate'
+  )
 })

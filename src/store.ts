@@ -22,13 +22,20 @@ export interface QueryResult<I, K> {
 export type GetItemKey<I, K> = (item: I) => K
 export type KeyToString<K> = (key: K) => string
 
+export type FilterPredicate<I> = (item: I) => boolean
+
+export type GetFilterPredicates<I, Q> = (
+  query: Q
+) => Iterable<FilterPredicate<I>>
+
 export const defaultKeyToString = (key: any) => {
   if (typeof key == 'string') return key
   else return JSON.stringify(key)
 }
 
-export interface InMemoryStoreOptions<I, K> {
+export interface InMemoryStoreOptions<I, K, Q> {
   items?: Array<I>
+  getFilterPredicates?: GetFilterPredicates<I, Q>
   getItemKey: GetItemKey<I, K>
   keyToString?: KeyToString<K>
 }
@@ -39,10 +46,14 @@ export class InMemoryStore<I, K, Q extends Query<K>>
   getItemKey: GetItemKey<I, K>
   keyToString: KeyToString<K>
 
-  constructor(options: InMemoryStoreOptions<I, K>) {
+  constructor(options: InMemoryStoreOptions<I, K, Q>) {
     this.items = {}
+
     this.getItemKey = options.getItemKey
     this.keyToString = options.keyToString || defaultKeyToString
+
+    if (options.getFilterPredicates)
+      this.getFilterPredicates = options.getFilterPredicates
 
     if (options.items) {
       options.items.forEach(item => {
@@ -52,36 +63,54 @@ export class InMemoryStore<I, K, Q extends Query<K>>
     }
   }
 
-  read(key: K): Promise<I | undefined> {
-    return Promise.resolve(this.items[this.keyToString(key)])
+  async read(key: K): Promise<I | undefined> {
+    return this.items[this.keyToString(key)]
   }
 
-  write(item: I): Promise<void> {
+  async write(item: I): Promise<void> {
     const key = this.keyToString(this.getItemKey(item))
     this.items[key] = item
-    return Promise.resolve()
   }
 
-  find(query: Q): Promise<QueryResult<I, K>> {
-    let cursor: K | null = null
+  async find(query: Q): Promise<QueryResult<I, K>> {
     let items = Object.values(this.items)
 
-    if (query.cursor) {
+    const filterPredicates = Array.from(this.getFilterPredicates(query))
+
+    if (filterPredicates.length) {
+      items = items.filter(item =>
+        filterPredicates.reduce(
+          (pass: boolean, predicate) => pass && predicate(item),
+          true
+        )
+      )
+    }
+
+    return this.paginateItems(items, query.cursor || null, query.limit)
+  }
+
+  getFilterPredicates(_query: Q): Iterable<FilterPredicate<I>> {
+    return []
+  }
+
+  protected paginateItems(items: Array<I>, cursor: K | null, limit?: number) {
+    if (cursor) {
       let found = false
       while (!found && items.length) {
-        found = deepEqual(this.getItemKey(items[0]), query.cursor)
+        found = deepEqual(this.getItemKey(items[0]), cursor)
         items.shift()
       }
       if (!found) {
-        return Promise.reject(new Error('Invalid cursor'))
+        throw new Error('Invalid cursor')
       }
+      cursor = null
     }
 
-    if ('limit' in query && items.length > query.limit!) {
-      cursor = this.getItemKey(items[query.limit! - 1])
-      items = items.slice(0, query.limit)
+    if (typeof limit == 'number' && items.length > limit) {
+      items = items.slice(0, limit)
+      cursor = items.length ? this.getItemKey(items.slice(-1)[0]) : null
     }
 
-    return Promise.resolve({ items, cursor })
+    return { items, cursor }
   }
 }
