@@ -1,16 +1,28 @@
 import test from 'tape'
-import { InMemoryStore, Query } from '../src'
+
+import {
+  EqualFilter,
+  InMemoryStore,
+  PrefixFilter,
+  Query,
+  SizeFilter,
+  equalPredicate,
+  prefixPredicate,
+  sizePredicate,
+} from '../src'
 
 interface User {
   id: string
   name: string
+  age: number | null
 }
 
 type UserKey = string
 
 interface UserQuery extends Query<UserKey> {
   filter?: {
-    name?: string
+    name?: EqualFilter<string> & PrefixFilter
+    age?: SizeFilter<number>
   }
 }
 
@@ -19,21 +31,35 @@ const getItemKey = (user: User) => user.id
 const user1: User = {
   id: 'u1',
   name: 'Trevor',
+  age: 47,
 }
 
 const user2: User = {
   id: 'u2',
   name: 'Whatever',
+  age: 15,
+}
+
+const user3: User = {
+  id: 'u3',
+  name: 'Eternal',
+  age: null,
 }
 
 const store = new InMemoryStore<User, UserKey, UserQuery>({
   getItemKey,
   getFilterPredicates: function*({ filter }) {
-    if (filter && filter.name !== undefined) {
-      yield item => item.name == filter.name
+    if (filter) {
+      if (filter.name !== undefined) {
+        yield item => equalPredicate(filter.name!)(item.name)
+        yield item => prefixPredicate(filter.name!)(item.name)
+      }
+      if (filter.age !== undefined) {
+        yield item => sizePredicate(filter.age!)(item.age)
+      }
     }
   },
-  items: [user1, user2],
+  items: [user1, user2, user3],
 })
 
 test('InMemoryStore.read', async t => {
@@ -49,17 +75,15 @@ test('InMemoryStore.read', async t => {
 })
 
 test('InMemoryStore.find', async t => {
-  t.plan(5)
-
   t.deepEqual(
     await store.find({}),
-    { items: [user1, user2], cursor: null },
+    { items: [user1, user2, user3], cursor: null },
     'returns a QueryResult'
   )
 
   t.deepEqual(
     await store.find({ cursor: 'u1' }),
-    { items: [user2], cursor: null },
+    { items: [user2, user3], cursor: null },
     'returns items after the provided cursor'
   )
 
@@ -69,7 +93,7 @@ test('InMemoryStore.find', async t => {
     'returns a cursor when a limit is provided and there are more items'
   )
 
-  await store.find({ cursor: 'u3' }).catch(error => {
+  await store.find({ cursor: 'u4' }).catch(error => {
     t.equal(
       error.message,
       'Invalid cursor',
@@ -78,8 +102,28 @@ test('InMemoryStore.find', async t => {
   })
 
   t.deepEqual(
-    await store.find({ filter: { name: 'Trevor' } }),
+    await store.find({ filter: { name: { eq: 'Trevor' } } }),
     { items: [user1], cursor: null },
-    'uses the filterPredicate'
+    'filters items by equality'
   )
+
+  t.deepEqual(
+    await store.find({ filter: { name: { prefix: 'Wh' } } }),
+    { items: [user2], cursor: null },
+    'filters items by prefix'
+  )
+
+  t.deepEqual(
+    await store.find({ filter: { age: { gt: 21 } } }),
+    { items: [user1], cursor: null },
+    'filters items by a size predicate'
+  )
+
+  t.deepEqual(
+    await store.find({ filter: { age: { gt: 11, lte: 15 } } }),
+    { items: [user2], cursor: null },
+    'filters items by a multiple size predicates'
+  )
+
+  t.end()
 })
