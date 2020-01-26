@@ -1,5 +1,4 @@
 import { Readable } from 'stream'
-import { flatten } from 'fp-ts/lib/Array'
 import { Store } from './store'
 import { generateRandomId, getCurrentTime } from './util'
 
@@ -13,16 +12,11 @@ export type Event<E, M extends EventName<E> = EventName<E>> = {
   data: EventData<E, M>
 }
 
-export interface ResolvedEvent<E, M extends EventName<E> = EventName<E>>
-  extends Event<E, M> {
-  updatedEdges: any[]
-}
-
-export interface EventEmitter<E> {
+export interface EventEmitter<E, P> {
   emit<M extends EventName<E>>(
     name: M,
     data: EventData<E, M>
-  ): Promise<ResolvedEvent<E, M>>
+  ): Promise<EmitResult<E, P, M>>
 }
 
 export type EventStore<E, K> = Store<Event<E, EventName<E>>, K>
@@ -39,31 +33,43 @@ export interface GetTime {
   (): string
 }
 
-export interface PostEmit<E> {
-  <M extends EventName<E>>(event: ResolvedEvent<E, M>): void
+export interface PostEmit<E, P> {
+  <M extends EventName<E>>(event: EmitResult<E, P, M>): void
 }
 
-interface Projection<E> {
-  handleEvent<M extends EventName<E>>(event: Event<E, M>): Promise<any>
+interface Projection<E, I> {
+  handleEvent<M extends EventName<E>>(event: Event<E, M>): Promise<Array<I>>
 }
 
-type Projections<E> = {
-  [key: string]: Projection<E>
+type ProjectionName<P> = keyof P
+
+type Projections<E, P> = {
+  [R in ProjectionName<P>]: Projection<E, P[R]>
 }
 
-export interface EventsOptions<E, K> {
+export type ProjectionUpdates<P> = {
+  [R in ProjectionName<P>]: Array<P[R]>
+}
+
+export interface EmitResult<E, P, M extends EventName<E>> {
+  event: Event<E, M>
+  updates: ProjectionUpdates<P>
+}
+
+export interface EventsOptions<E, P, K> {
   generateId?: IdGenerator
   getTime?: GetTime
-  postEmit?: PostEmit<E>
-  projections?: Projections<E>
+  postEmit?: PostEmit<E, P>
+  projections: Projections<E, P>
   store: EventStore<E, K>
 }
 
-export class Events<E, K> implements EventEmitter<E>, EventStorer<E, K> {
+export class Events<E, P extends {}, K>
+  implements EventEmitter<E, P>, EventStorer<E, K> {
   generateId: IdGenerator
   getTime: GetTime
-  postEmit?: PostEmit<E>
-  projections: Projections<E>
+  postEmit?: PostEmit<E, P>
+  projections: Projections<E, P>
   store: EventStore<E, K>
 
   constructor({
@@ -72,11 +78,11 @@ export class Events<E, K> implements EventEmitter<E>, EventStorer<E, K> {
     postEmit,
     projections,
     store,
-  }: EventsOptions<E, K>) {
+  }: EventsOptions<E, P, K>) {
     this.generateId = generateId || generateRandomId
     this.getTime = getTime || getCurrentTime
     this.postEmit = postEmit
-    this.projections = projections || {}
+    this.projections = projections
     this.store = store
   }
 
@@ -95,21 +101,20 @@ export class Events<E, K> implements EventEmitter<E>, EventStorer<E, K> {
   async emit<M extends EventName<E>>(
     name: M,
     data: EventData<E, M>
-  ): Promise<ResolvedEvent<E, M>> {
+  ): Promise<EmitResult<E, P, M>> {
     const event = this.buildEvent(name, data)
 
     await this.store.write(event)
 
-    const updatedEdges = await this.updateProjections(event)
-    const resolvedEvent = { ...event, updatedEdges }
+    const updates = await this.updateProjections(event)
 
     if (this.postEmit !== undefined) {
       process.nextTick(() => {
-        this.postEmit!<M>(resolvedEvent)
+        this.postEmit!<M>({ event, updates })
       })
     }
 
-    return resolvedEvent
+    return { event, updates }
   }
 
   buildEvent<M extends EventName<E>>(
@@ -126,12 +131,14 @@ export class Events<E, K> implements EventEmitter<E>, EventStorer<E, K> {
 
   async updateProjections<M extends EventName<E>>(
     event: Event<E, M>
-  ): Promise<Array<any>> {
-    const jobs = await Promise.all(
-      Object.keys(this.projections).map(key =>
-        this.projections[key].handleEvent(event)
-      )
-    )
-    return flatten(jobs)
+  ): Promise<ProjectionUpdates<P>> {
+    let results: Partial<ProjectionUpdates<P>> = {}
+
+    for (let key in this.projections) {
+      const projection = this.projections[key]
+      const result = await projection.handleEvent(event)
+      results[key] = result
+    }
+    return results as ProjectionUpdates<P>
   }
 }

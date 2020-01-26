@@ -71,68 +71,71 @@ const userEdge = {
   updatedAt: 't0',
 }
 
-const userCreatedResolvedEvent = {
-  ...userCreatedEvent,
-  updatedEdges: [userEdge],
+type Projections = {
+  users: Edge<User>
 }
 
-type TestEventsOptions = Partial<EventsOptions<EventTypes, string>>
+type UserStoreKey = string
 type EventStoreKey = string
 
-const testEvents = (options?: TestEventsOptions) =>
-  new Events<EventTypes, EventStoreKey>({
+type TestEventsOptions = {
+  postEmit?: EventsOptions<EventTypes, Projections, UserStoreKey>['postEmit']
+}
+
+const setup = (options?: TestEventsOptions) => {
+  const projection = new Projection({
+    typename: 'User',
+    handlers: UserProjectionHandlers,
+    store: new InMemoryStore({ getItemKey: getUserKey }),
+  })
+
+  const events = new Events<EventTypes, Projections, EventStoreKey>({
     generateId: sequentialIdGenerator('e'),
     getTime: sequentialIdGenerator('t'),
+    projections: { users: projection },
     store: new InMemoryStore({
       getItemKey: (event: Event<EventTypes>) => event.id,
     }),
     ...options,
   })
 
-const userProjection = () =>
-  new Projection({
-    typename: 'User',
-    handlers: UserProjectionHandlers,
-    store: new InMemoryStore({ getItemKey: getUserKey }),
-  })
+  return { events, projection }
+}
 
-test('MockEvents', async t => {
-  const events = testEvents({})
+test('Events.emit', async t => {
+  const { events, projection } = setup()
 
   const result = await events.emit('UserCreated', userCreatedData)
 
-  t.deepEqual(result, { ...userCreatedEvent, updatedEdges: [] })
+  t.deepEqual(result, {
+    event: userCreatedEvent,
+    updates: { users: [userEdge] },
+  })
+  t.deepEqual(await projection.store.read('u1'), userEdge)
   t.deepEqual(await events.store.read('e0'), userCreatedEvent)
 
   t.end()
 })
 
-test('MockEvents with projections', async t => {
-  t.plan(4)
+test('Events.postEmit', async t => {
+  t.plan(2)
 
-  const projection = userProjection()
-
-  const events = testEvents({
-    projections: { user: projection },
-    postEmit: event => {
-      t.deepEqual(event, userCreatedResolvedEvent)
+  const { events } = setup({
+    postEmit: ({ event, updates }) => {
+      t.deepEqual(event, userCreatedEvent)
+      t.deepEqual(updates, { users: [userEdge] })
     },
   })
 
-  const result = await events.emit('UserCreated', userCreatedData)
-
-  t.deepEqual(result, userCreatedResolvedEvent)
-  t.deepEqual(await projection.store.read('u1'), userEdge)
-  t.deepEqual(await events.store.read('e0'), userCreatedEvent)
+  await events.emit('UserCreated', userCreatedData)
 })
 
 test('Events.load', async t => {
-  const projection = userProjection()
-  const Events = testEvents({ projections: { user: projection } })
+  const { events, projection } = setup()
 
   const stream = Readable.from([userCreatedEvent])
 
-  await Events.load(stream)
+  await events.load(stream)
 
   t.deepEqual(
     await projection.store.read('u1'),
@@ -141,7 +144,7 @@ test('Events.load', async t => {
   )
 
   t.deepEqual(
-    await Events.store.read('e0'),
+    await events.store.read('e0'),
     undefined,
     'does not write the event to the Events store'
   )
@@ -150,15 +153,14 @@ test('Events.load', async t => {
 })
 
 test('Events.load with write option', async t => {
-  const projection = userProjection()
-  const Events = testEvents({ projections: { user: projection } })
+  const { events } = setup()
 
   const stream = Readable.from([userCreatedEvent])
 
-  await Events.load(stream, { write: true })
+  await events.load(stream, { write: true })
 
   t.deepEqual(
-    await Events.store.read('e0'),
+    await events.store.read('e0'),
     userCreatedEvent,
     'writes the event to the Events store'
   )
