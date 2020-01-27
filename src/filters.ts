@@ -2,7 +2,7 @@ export type EqualFilter<T> = {
   eq?: T
 }
 
-export type SizeFilter<T> = {
+export type ComparisonFilter<T> = {
   eq?: T
   gt?: T
   gte?: T
@@ -24,9 +24,13 @@ export const equalPredicate = <T>({ eq }: EqualFilter<T>) => (
   else return x === eq
 }
 
-export const sizePredicate = <T>({ eq, gt, lt, gte, lte }: SizeFilter<T>) => (
-  x: T | null | undefined
-) => {
+export const comparisonPredicate = <T>({
+  eq,
+  gt,
+  lt,
+  gte,
+  lte,
+}: ComparisonFilter<T>) => (x: T | null | undefined) => {
   if (x === undefined || x === null) return false
   if (eq !== undefined && x !== eq) return false
   if (gt !== undefined && x <= gt) return false

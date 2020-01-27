@@ -1,14 +1,14 @@
 import test from 'tape'
 
 import {
+  ComparisonFilter,
   EqualFilter,
   InMemoryStore,
   PrefixFilter,
   Query,
-  SizeFilter,
+  comparisonPredicate,
   equalPredicate,
   prefixPredicate,
-  sizePredicate,
 } from '../src'
 
 interface User {
@@ -22,7 +22,7 @@ type UserKey = string
 interface UserQuery extends Query<UserKey> {
   filter?: {
     name?: EqualFilter<string> & PrefixFilter
-    age?: SizeFilter<number>
+    age?: ComparisonFilter<number>
   }
 }
 
@@ -55,7 +55,7 @@ const store = new InMemoryStore<User, UserKey, UserQuery>({
         yield item => prefixPredicate(filter.name!)(item.name)
       }
       if (filter.age !== undefined) {
-        yield item => sizePredicate(filter.age!)(item.age)
+        yield item => comparisonPredicate(filter.age!)(item.age)
       }
     }
   },
