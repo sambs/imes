@@ -1,5 +1,5 @@
 import test from 'tape'
-import { Edge, InMemoryStore, Projection, Query } from '../src'
+import { Edge, InMemoryStore, MockProjection, Projection, Query } from '../src'
 
 interface Events {
   PostCreated: {
@@ -40,6 +40,7 @@ const post1 = {
   typename: 'Post',
   updatedAt: 'yesterday',
 }
+
 const post2 = {
   createdAt: 'yesterday',
   eventIds: ['e2'],
@@ -171,6 +172,36 @@ test('projection.handleEvent with an InitHandler', async t => {
     await projection.store.read('p3'),
     expectedEdge,
     'adds the node to the projection store'
+  )
+
+  t.end()
+})
+
+test('MockProjection.handleEvent', async t => {
+  const store = new InMemoryStore<PostEdge, PostKey, PostQuery>({
+    getItemKey: post => post.node.id,
+    items: [post1, post2],
+  })
+
+  const projection = new MockProjection<Events, Post, PostKey, PostQuery>({
+    typename: 'Post',
+    store,
+    updates: {
+      PostCreated: [[post1]],
+    },
+  })
+
+  const updates = await projection.handleEvent({
+    id: 'e3',
+    name: 'PostCreated',
+    data: { id: 'p3', title: 'Keep It', score: 0 },
+    time: 'now',
+  })
+
+  t.deepEqual(
+    updates,
+    [post1],
+    'returns the specified updates ignoring event data'
   )
 
   t.end()

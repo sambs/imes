@@ -110,3 +110,35 @@ export class Projection<E, N, K, Q> {
     return edges
   }
 }
+
+export type MockProjectionUpdates<E, N> = {
+  [M in EventName<E>]?: Array<Array<Edge<N>>>
+}
+
+export interface MockProjectionOptions<E, N, K, Q> {
+  store: QueryableStore<Edge<N>, K, Q>
+  typename: string
+  updates?: MockProjectionUpdates<E, N>
+}
+
+export class MockProjection<E, N, K, Q> extends Projection<E, N, K, Q> {
+  updates: MockProjectionUpdates<E, N>
+
+  constructor({ store, typename, updates }: MockProjectionOptions<E, N, K, Q>) {
+    super({ handlers: {}, store, typename })
+    this.updates = updates || {}
+  }
+
+  async handleEvent<M extends EventName<E>>(
+    event: Event<E, M>
+  ): Promise<Edge<N>[]> {
+    const updates = this.updates[event.name]
+    if (updates) {
+      const edges = updates.shift() || []
+      await Promise.all(edges.map(edge => this.store.write(edge)))
+      return edges
+    } else {
+      return []
+    }
+  }
+}
