@@ -37,18 +37,20 @@ export interface PostEmit<E, P> {
   <M extends EventName<E>>(event: EmitResult<E, P, M>): void
 }
 
-interface Projection<E, I> {
+// Reduced functionality interfaces between Events and Projections
+
+export interface EventsProjection<E, I> {
   handleEvent<M extends EventName<E>>(event: Event<E, M>): Promise<Array<I>>
 }
 
-type ProjectionName<P> = keyof P
+export type EventsProjectionName<P> = keyof P
 
-type Projections<E, P> = {
-  [R in ProjectionName<P>]: Projection<E, P[R]>
+export type EventsProjections<E, P> = {
+  [R in EventsProjectionName<P>]: EventsProjection<E, P[R]>
 }
 
 export type ProjectionUpdates<P> = {
-  [R in ProjectionName<P>]: Array<P[R]>
+  [R in EventsProjectionName<P>]: Array<P[R]>
 }
 
 export interface EmitResult<E, P, M extends EventName<E>> {
@@ -60,7 +62,7 @@ export interface EventsOptions<E, P, K> {
   generateId?: IdGenerator
   getTime?: GetTime
   postEmit?: PostEmit<E, P>
-  projections: Projections<E, P>
+  projections: EventsProjections<E, P>
   store: EventStore<E, K>
 }
 
@@ -69,7 +71,7 @@ export class Events<E, P extends {}, K>
   generateId: IdGenerator
   getTime: GetTime
   postEmit?: PostEmit<E, P>
-  projections: Projections<E, P>
+  projections: EventsProjections<E, P>
   store: EventStore<E, K>
 
   constructor({
