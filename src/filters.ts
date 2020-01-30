@@ -2,7 +2,7 @@ export type EqualFilter<T> = {
   eq?: T
 }
 
-export type ComparisonFilter<T> = {
+export type OrdFilter<T> = {
   eq?: T
   gt?: T
   gte?: T
@@ -24,13 +24,9 @@ export const equalPredicate = <T>({ eq }: EqualFilter<T>) => (
   else return x === eq
 }
 
-export const comparisonPredicate = <T>({
-  eq,
-  gt,
-  lt,
-  gte,
-  lte,
-}: ComparisonFilter<T>) => (x: T | null | undefined) => {
+export const ordPredicate = <T>({ eq, gt, lt, gte, lte }: OrdFilter<T>) => (
+  x: T | null | undefined
+) => {
   if (x === undefined || x === null) return false
   if (eq !== undefined && x !== eq) return false
   if (gt !== undefined && x <= gt) return false
