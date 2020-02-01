@@ -1,118 +1,57 @@
 import test from 'tape'
 import { Readable } from 'stream'
+import { InMemoryStore } from '../src'
 
 import {
-  Edge,
-  Event,
-  InMemoryStore,
+  EmitResult,
   Events,
-  EventsOptions,
-  Projection,
-  ProjectionHandlers,
-  Query,
-  sequentialIdGenerator,
-} from '../src'
+  EventName,
+  PostProjection,
+  PostStore,
+} from './setup'
 
-type EventTypes = {
-  UserCreated: {
-    id: string
-    name: string
-  }
-  UserLoggedIn: {
-    id: string
-  }
+const eventData = {
+  id: 'p1',
+  title: 'Event Sourcing Explained',
 }
 
-interface User {
-  id: string
-  name: string
-  loginCount: number
+const event = {
+  data: eventData,
+  meta: { name: 'PostCreated', time: 't0' },
+  key: 'e0',
 }
-
-type UserKey = string
-
-const getUserKey = (edge: Edge<User>): UserKey => edge.node.id
-
-const UserProjectionHandlers: ProjectionHandlers<
-  EventTypes,
-  User,
-  UserKey,
-  Query<UserKey>
-> = {
-  UserCreated: {
-    init: ({ data }) => ({ ...data, loginCount: 0 }),
-  },
-  UserLoggedIn: {
-    selectOne: event => event.data.id,
-    transform: (_event, node) => ({
-      ...node,
-      loginCount: node.loginCount + 1,
-    }),
-  },
+const post = {
+  data: { published: false, title: 'Event Sourcing Explained', score: 0 },
+  meta: { createdAt: 'now', eventKeys: ['e0'], updatedAt: 'now' },
+  key: 'p1',
 }
-
-const userCreatedData = {
-  id: 'u1',
-  name: 'Trevor',
-}
-
-const userCreatedEvent = {
-  id: 'e0',
-  name: 'UserCreated',
-  data: userCreatedData,
-  time: 't0',
-}
-
-const userEdge = {
-  createdAt: 't0',
-  eventIds: ['e0'],
-  node: { ...userCreatedData, loginCount: 0 },
-  typename: 'User',
-  updatedAt: 't0',
-}
-
-type Projections = {
-  users: Edge<User>
-}
-
-type UserStoreKey = string
-type EventStoreKey = string
 
 type TestEventsOptions = {
-  postEmit?: EventsOptions<EventTypes, Projections, UserStoreKey>['postEmit']
+  postEmit?: <N extends EventName>(result: EmitResult<N>) => void
 }
 
 const setup = (options?: TestEventsOptions) => {
-  const projection = new Projection({
-    typename: 'User',
-    handlers: UserProjectionHandlers,
-    store: new InMemoryStore({ getItemKey: getUserKey }),
-  })
-
-  const events = new Events<EventTypes, Projections, EventStoreKey>({
-    generateId: sequentialIdGenerator('e'),
-    getTime: sequentialIdGenerator('t'),
-    projections: { users: projection },
-    store: new InMemoryStore({
-      getItemKey: (event: Event<EventTypes>) => event.id,
-    }),
+  const postStore = new PostStore()
+  const posts = new PostProjection({ store: postStore })
+  const eventStore = new InMemoryStore({})
+  const events = new Events({
+    projections: { posts },
+    store: eventStore,
     ...options,
   })
 
-  return { events, projection }
+  return { events, posts }
 }
 
 test('Events.emit', async t => {
-  const { events, projection } = setup()
+  const { events, posts } = setup()
 
-  const result = await events.emit('UserCreated', userCreatedData)
+  const result = await events.emit('PostCreated', eventData)
 
-  t.deepEqual(result, {
-    event: userCreatedEvent,
-    updates: { users: [userEdge] },
-  })
-  t.deepEqual(await projection.store.read('u1'), userEdge)
-  t.deepEqual(await events.store.read('e0'), userCreatedEvent)
+  t.deepEqual(result, { event, updates: { posts: [post] } })
+
+  t.deepEqual(await posts.store.read('p1'), post)
+  t.deepEqual(await events.store.read('e0'), event)
 
   t.end()
 })
@@ -121,27 +60,23 @@ test('Events.postEmit', async t => {
   t.plan(2)
 
   const { events } = setup({
-    postEmit: ({ event, updates }) => {
-      t.deepEqual(event, userCreatedEvent)
-      t.deepEqual(updates, { users: [userEdge] })
+    postEmit: result => {
+      t.deepEqual(result.event, event)
+      t.deepEqual(result.updates, { posts: [post] })
     },
   })
 
-  await events.emit('UserCreated', userCreatedData)
+  await events.emit('PostCreated', eventData)
 })
 
 test('Events.load', async t => {
-  const { events, projection } = setup()
+  const { events, posts } = setup()
 
-  const stream = Readable.from([userCreatedEvent])
+  const stream = Readable.from([event])
 
   await events.load(stream)
 
-  t.deepEqual(
-    await projection.store.read('u1'),
-    userEdge,
-    'populates projectios'
-  )
+  t.deepEqual(await posts.store.read('p1'), post, 'populates projectios')
 
   t.deepEqual(
     await events.store.read('e0'),
@@ -155,13 +90,13 @@ test('Events.load', async t => {
 test('Events.load with write option', async t => {
   const { events } = setup()
 
-  const stream = Readable.from([userCreatedEvent])
+  const stream = Readable.from([event])
 
   await events.load(stream, { write: true })
 
   t.deepEqual(
     await events.store.read('e0'),
-    userCreatedEvent,
+    event,
     'writes the event to the Events store'
   )
 

@@ -1,138 +1,204 @@
 import { Event, EventName } from './events'
+import { Item, ItemData, ItemMeta, ItemKey } from './types'
 import { QueryableStore } from './store'
 
-export interface Edge<N> {
-  createdAt: string
-  eventIds: string[]
-  node: N
-  typename: string
-  updatedAt: string
+export interface InitHandler<
+  T,
+  M,
+  K,
+  N extends EventName<T>,
+  I extends Item<any, any, any>
+> {
+  init: (event: Event<T, M, K, N>) => ItemData<I>
+  key: (event: Event<T, M, K, N>) => ItemKey<I>
 }
 
-export interface InitHandler<E, M extends EventName<E>, N> {
-  init: (event: Event<E, M>) => N
+export interface SingleTransformHandler<
+  T,
+  M,
+  K,
+  N extends EventName<T>,
+  I extends Item<any, any, any>
+> {
+  selectOne: (event: Event<T, M, K, N>) => ItemKey<I>
+  transform: (event: Event<T, M, K, N>, data: ItemData<I>) => ItemData<I>
 }
 
-export interface SingleTransformHandler<E, M extends EventName<E>, N, K> {
-  selectOne: (event: Event<E, M>) => K
-  transform: (event: Event<E, M>, node: N) => N
+export interface ManyTransformHandler<
+  T,
+  M,
+  K,
+  N extends EventName<T>,
+  I extends Item<any, any, any>,
+  Q
+> {
+  selectMany: (event: Event<T, M, K, N>) => Q
+  transform: (event: Event<T, M, K, N>, data: ItemData<I>) => ItemData<I>
 }
 
-export interface ManyTransformHandler<E, M extends EventName<E>, N, Q> {
-  selectMany: (event: Event<E, M>) => Q
-  transform: (event: Event<E, M>, node: N) => N
-}
+export type Handler<
+  T,
+  M,
+  K,
+  N extends EventName<T>,
+  I extends Item<any, any, any>,
+  Q
+> =
+  | InitHandler<T, M, K, N, I>
+  | SingleTransformHandler<T, M, K, N, I>
+  | ManyTransformHandler<T, M, K, N, I, Q>
 
-export type Handler<E, M extends EventName<E>, N, K, Q> =
-  | InitHandler<E, M, N>
-  | SingleTransformHandler<E, M, N, K>
-  | ManyTransformHandler<E, M, N, Q>
-
-export const isInitHandler = <E, M extends EventName<E>, N, K, Q>(
-  handler: Handler<E, M, N, K, Q> | undefined
-): handler is InitHandler<E, M, N> => {
+export const isInitHandler = <
+  T,
+  M,
+  K,
+  N extends EventName<T>,
+  I extends Item<any, any, any>,
+  Q
+>(
+  handler: Handler<T, M, K, N, I, Q> | undefined
+): handler is InitHandler<T, M, K, N, I> => {
   if (handler === undefined) return false
-  return (handler as InitHandler<E, M, N>).init !== undefined
+  return (handler as InitHandler<T, M, K, N, I>).init !== undefined
 }
 
-export const isSingleTransformHandler = <E, M extends EventName<E>, N, K, Q>(
-  handler: Handler<E, M, N, K, Q> | undefined
-): handler is SingleTransformHandler<E, M, N, K> => {
+export const isSingleTransformHandler = <
+  T,
+  M,
+  K,
+  N extends EventName<T>,
+  I extends Item<any, any, any>,
+  Q
+>(
+  handler: Handler<T, M, K, N, I, Q> | undefined
+): handler is SingleTransformHandler<T, M, K, N, I> => {
   if (handler === undefined) return false
-  return (handler as SingleTransformHandler<E, M, N, K>).selectOne !== undefined
+  return (
+    (handler as SingleTransformHandler<T, M, K, N, I>).selectOne !== undefined
+  )
 }
 
-export const isManyTransformHandler = <E, M extends EventName<E>, N, K, Q>(
-  handler: Handler<E, M, N, K, Q> | undefined
-): handler is ManyTransformHandler<E, M, N, Q> => {
+export const isManyTransformHandler = <
+  T,
+  M,
+  K,
+  N extends EventName<T>,
+  I extends Item<any, any, any>,
+  Q
+>(
+  handler: Handler<T, M, K, N, I, Q> | undefined
+): handler is ManyTransformHandler<T, M, K, N, I, Q> => {
   if (handler === undefined) return false
-  return (handler as ManyTransformHandler<E, M, N, Q>).selectMany !== undefined
+  return (
+    (handler as ManyTransformHandler<T, M, K, N, I, Q>).selectMany !== undefined
+  )
 }
 
-export type ProjectionHandlers<E, N, K, Q> = {
-  [M in EventName<E>]?: Handler<E, M, N, K, Q>
+export type ProjectionHandlers<T, M, K, I extends Item<any, any, any>, Q> = {
+  [N in EventName<T>]?: Handler<T, M, K, N, I, Q>
 }
 
-export interface ProjectionOptions<E, N, K, Q> {
-  handlers: ProjectionHandlers<E, N, K, Q>
-  store: QueryableStore<Edge<N>, K, Q>
-  typename: string
+export interface ProjectionOptions<T, M, K, I extends Item<any, any, any>, Q> {
+  handlers: ProjectionHandlers<T, M, K, I, Q>
+  initMeta: (event: Event<T, M, K>) => ItemMeta<I>
+  store: QueryableStore<I, Q>
+  updateMeta: (event: Event<T, M, K>, meta: ItemMeta<I>) => ItemMeta<I>
 }
 
-export class Projection<E, N, K, Q> {
-  handlers: ProjectionHandlers<E, N, K, Q>
-  store: QueryableStore<Edge<N>, K, Q>
-  typename: string
+export class Projection<T, M, K, I extends Item<any, any, any>, Q> {
+  handlers: ProjectionHandlers<T, M, K, I, Q>
+  initMeta: (event: Event<T, M, K>) => ItemMeta<I>
+  store: QueryableStore<I, Q>
+  updateMeta: (event: Event<T, M, K>, meta: ItemMeta<I>) => ItemMeta<I>
 
-  constructor({ handlers, store, typename }: ProjectionOptions<E, N, K, Q>) {
+  constructor({
+    initMeta,
+    handlers,
+    store,
+    updateMeta,
+  }: ProjectionOptions<T, M, K, I, Q>) {
     this.handlers = handlers
+    this.initMeta = initMeta
     this.store = store
-    this.typename = typename
+    this.updateMeta = updateMeta
   }
 
-  async handleEvent<M extends EventName<E>>(
-    event: Event<E, M>
-  ): Promise<Edge<N>[]> {
-    const handler = this.handlers[event.name]
+  async handleEvent<N extends EventName<T>>(
+    event: Event<T, M, K, N>
+  ): Promise<Array<I>> {
+    const handler = this.handlers[event.meta.name]
 
-    let edges: Edge<N>[] = []
+    let items: Array<I> = []
 
     if (handler == undefined) {
       return []
     } else if (isInitHandler(handler)) {
-      edges = [
+      items = [
         {
-          createdAt: event.time,
-          eventIds: [event.id],
-          node: handler.init(event),
-          typename: this.typename,
-          updatedAt: event.time,
-        },
+          data: handler.init(event),
+          meta: this.initMeta(event),
+          key: handler.key(event),
+        } as I,
       ]
     } else {
       if (isSingleTransformHandler(handler)) {
-        const edge = await this.store.read(handler.selectOne(event))
-        if (edge !== undefined) edges = [edge]
+        const item = await this.store.read(handler.selectOne(event))
+        if (item !== undefined) items = [item]
       } else if (isManyTransformHandler(handler)) {
         const connection = await this.store.find(handler.selectMany(event))
-        edges = connection.items
+        items = connection.items
       }
-      edges = edges.map(edge => ({
-        ...edge,
-        node: handler.transform(event, edge.node),
-        updatedAt: event.time,
-        eventIds: [...edge.eventIds, event.id],
-      }))
+      items = items.map(
+        ({ data, meta, key }) =>
+          ({
+            data: handler.transform(event, data),
+            meta: this.updateMeta(event, meta),
+            key,
+          } as I)
+      )
     }
 
-    await Promise.all(edges.map(edge => this.store.write(edge)))
+    await Promise.all(items.map(item => this.store.write(item)))
 
-    return edges
+    return items
   }
 }
 
-export type MockProjectionUpdates<E, N> = {
-  [M in EventName<E>]?: Array<Array<Edge<N>>>
+export type MockProjectionUpdates<T, I extends Item<any, any, any>> = {
+  [N in EventName<T>]?: Array<Array<I>>
 }
 
-export interface MockProjectionOptions<E, N, K, Q> {
-  store: QueryableStore<Edge<N>, K, Q>
-  typename: string
-  updates?: MockProjectionUpdates<E, N>
+export interface MockProjectionOptions<
+  T,
+  M,
+  K,
+  I extends Item<any, any, any>,
+  Q
+> {
+  store: QueryableStore<I, Q>
+  updates?: MockProjectionUpdates<T, I>
+  initMeta: (event: Event<T, M, K>) => ItemMeta<I>
+  updateMeta: (event: Event<T, M, K>, meta: ItemMeta<I>) => ItemMeta<I>
 }
 
-export class MockProjection<E, N, K, Q> extends Projection<E, N, K, Q> {
-  updates: MockProjectionUpdates<E, N>
+export class MockProjection<
+  T,
+  M,
+  K,
+  I extends Item<any, any, any>,
+  Q
+> extends Projection<T, M, K, I, Q> {
+  updates: MockProjectionUpdates<T, I>
 
-  constructor({ store, typename, updates }: MockProjectionOptions<E, N, K, Q>) {
-    super({ handlers: {}, store, typename })
+  constructor({ updates, ...options }: MockProjectionOptions<T, M, K, I, Q>) {
+    super({ handlers: {}, ...options })
     this.updates = updates || {}
   }
 
-  async handleEvent<M extends EventName<E>>(
-    event: Event<E, M>
-  ): Promise<Edge<N>[]> {
-    const updates = this.updates[event.name]
+  async handleEvent<N extends EventName<T>>(
+    event: Event<T, M, K, N>
+  ): Promise<I[]> {
+    const updates = this.updates[event.meta.name]
     if (updates) {
       const edges = updates.shift() || []
       await Promise.all(edges.map(edge => this.store.write(edge)))

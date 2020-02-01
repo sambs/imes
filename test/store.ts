@@ -11,51 +11,66 @@ import {
   prefixPredicate,
 } from '../src'
 
-interface User {
-  id: string
+interface UserData {
   name: string
   age: number | null
 }
 
 type UserKey = string
 
-interface UserQuery extends Query<UserKey> {
+interface UserMeta {
+  createdAt: string
+}
+
+interface User {
+  data: UserData
+  meta: UserMeta
+  key: UserKey
+}
+
+interface UserQuery extends Query<User> {
   filter?: {
     name?: EqualFilter<string> & PrefixFilter
     age?: OrdFilter<number>
   }
 }
 
-const getItemKey = (user: User) => user.id
-
 const user1: User = {
-  id: 'u1',
-  name: 'Trevor',
-  age: 47,
+  data: {
+    name: 'Trevor',
+    age: 47,
+  },
+  meta: { createdAt: 'yesterday' },
+  key: 'u1',
 }
 
 const user2: User = {
-  id: 'u2',
-  name: 'Whatever',
-  age: 15,
+  data: {
+    name: 'Whatever',
+    age: 15,
+  },
+  meta: { createdAt: 'today' },
+  key: 'u2',
 }
 
 const user3: User = {
-  id: 'u3',
-  name: 'Eternal',
-  age: null,
+  data: {
+    name: 'Eternal',
+    age: null,
+  },
+  meta: { createdAt: 'now' },
+  key: 'u3',
 }
 
-const store = new InMemoryStore<User, UserKey, UserQuery>({
-  getItemKey,
+const store = new InMemoryStore<User, UserQuery>({
   getFilterPredicates: function*({ filter }) {
     if (filter) {
       if (filter.name !== undefined) {
-        yield item => equalPredicate(filter.name!)(item.name)
-        yield item => prefixPredicate(filter.name!)(item.name)
+        yield item => equalPredicate(filter.name!)(item.data.name)
+        yield item => prefixPredicate(filter.name!)(item.data.name)
       }
       if (filter.age !== undefined) {
-        yield item => ordPredicate(filter.age!)(item.age)
+        yield item => ordPredicate(filter.age!)(item.data.age)
       }
     }
   },

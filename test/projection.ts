@@ -1,176 +1,152 @@
 import test from 'tape'
-import { Edge, InMemoryStore, MockProjection, Projection, Query } from '../src'
+import { InMemoryStore, MockProjection, Projection } from '../src'
 
-interface Events {
-  PostCreated: {
-    id: string
-    title: string
-    score: number
-  }
+import {
+  EventTypes,
+  EventMeta,
+  EventKey,
+  Post,
+  PostQuery,
+  PostStore,
+  PostProjection,
+} from './setup'
 
-  PostPublished: {
-    id: string
-  }
-
-  AllPostsPublished: {
-    data: void
-  }
-}
-
-interface Post {
-  id: string
-  title: string
-  score: number
-  published: boolean
-}
-
-export type PostEdge = Edge<Post>
-export type PostKey = string
-export type PostQuery = Query<PostKey>
-
-const post1 = {
-  createdAt: 'yesterday',
-  eventIds: ['e1'],
-  node: {
-    id: 'p1',
+const post1: Post = {
+  data: {
     title: 'Who Ya?',
     score: 3.4,
     published: true,
   },
-  typename: 'Post',
-  updatedAt: 'yesterday',
+  meta: {
+    createdAt: 'yesterday',
+    eventKeys: ['e1'],
+    updatedAt: 'yesterday',
+  },
+  key: 'p1',
 }
 
 const post2 = {
-  createdAt: 'yesterday',
-  eventIds: ['e2'],
-  node: {
-    id: 'p2',
+  data: {
     title: 'Whoa Ye!',
     score: 6.2,
     published: false,
   },
-  typename: 'Post',
-  updatedAt: 'yesterday',
+  meta: {
+    createdAt: 'yesterday',
+    eventKeys: ['e2'],
+    updatedAt: 'yesterday',
+  },
+  key: 'p2',
 }
 
-const postProjection = () =>
-  new Projection<Events, Post, PostKey, PostQuery>({
-    typename: 'Post',
-    handlers: {
-      PostCreated: {
-        init: ({ data }) => ({ published: false, ...data }),
-      },
-      PostPublished: {
-        selectOne: ({ data: { id } }) => id,
-        transform: (_, post) => ({ ...post, published: true }),
-      },
-      // AllPostsPublished: {
-      //   selectMany: () => ({ published: false }),
-      //   transform: (_, post) => ({ ...post, published: true }),
-      // },
-    },
-    store: new InMemoryStore({
-      getItemKey: post => post.node.id,
-      items: [post1, post2],
-    }),
-  })
-
 test('projection.handleEvent with a SingleTransformHandler', async t => {
-  const projection = postProjection()
+  const store = new PostStore({ items: [post1, post2] })
+  const projection = new PostProjection({ store })
 
-  const updatedEdges = await projection.handleEvent({
-    id: 'e3',
-    name: 'PostPublished',
+  const updatedItems = await projection.handleEvent({
+    key: 'e3',
     data: { id: 'p2' },
-    time: 'now',
+    meta: {
+      name: 'PostPublished',
+      time: 'now',
+    },
   })
 
-  const expectedEdge = {
-    createdAt: 'yesterday',
-    eventIds: ['e2', 'e3'],
-    node: {
-      id: 'p2',
+  const expectedItem = {
+    data: {
       title: 'Whoa Ye!',
       score: 6.2,
       published: true,
     },
-    typename: 'Post',
-    updatedAt: 'now',
+    meta: {
+      createdAt: 'yesterday',
+      eventKeys: ['e2', 'e3'],
+      updatedAt: 'now',
+    },
+    key: 'p2',
   }
 
-  t.deepEqual(updatedEdges, [expectedEdge], 'returns an array of updated edges')
+  t.deepEqual(updatedItems, [expectedItem], 'returns an array of updated Items')
 
   t.deepEqual(
     await projection.store.read('p2'),
-    expectedEdge,
+    expectedItem,
     'updates the node in the projection store'
   )
 
   t.end()
 })
 
-// test('projection.handleEvent with a ManyTransformHandler', async t => {
-//   const projection = postProjection()
+test('projection.handleEvent with a ManyTransformHandler', async t => {
+  const store = new PostStore({ items: [post1, post2] })
+  const projection = new PostProjection({ store })
 
-//   const updatedEdges = await projection.handleEvent({
-//     id: 'e3',
-//     name: 'AllPostsPublished',
-//     time: 'now',
-//   })
-
-//   const expectedEdge = {
-//     createdAt: 'yesterday',
-//     eventIds: ['e2', 'e3'],
-//     node: {
-//       id: 'p2',
-//       title: 'Whoa Ye!',
-//       score: 6.2,
-//       published: true,
-//     },
-//     typename: 'Post',
-//     updatedAt: 'now',
-//   }
-
-//   t.deepEqual(updatedEdges, [expectedEdge], 'returns an array of updated edges')
-
-//   t.deepEqual(
-//     await projection.store.read('p2'),
-//     expectedEdge,
-//     'updates the node in the projection store'
-//   )
-
-//   t.end()
-// })
-
-test('projection.handleEvent with an InitHandler', async t => {
-  const projection = postProjection()
-
-  const updatedEdges = await projection.handleEvent({
-    id: 'e3',
-    name: 'PostCreated',
-    data: { id: 'p3', title: 'Keep It', score: 0 },
-    time: 'now',
+  const updatedItems = await projection.handleEvent({
+    data: undefined,
+    meta: {
+      name: 'AllPostsPublished',
+      time: 'now',
+    },
+    key: 'e3',
   })
 
-  const expectedEdge = {
-    createdAt: 'now',
-    eventIds: ['e3'],
-    node: {
-      id: 'p3',
+  const expectedItem = {
+    data: {
+      title: 'Whoa Ye!',
+      score: 6.2,
+      published: true,
+    },
+    meta: {
+      createdAt: 'yesterday',
+      eventKeys: ['e2', 'e3'],
+      updatedAt: 'now',
+    },
+    key: 'p2',
+  }
+
+  t.deepEqual(updatedItems, [expectedItem], 'returns an array of updated Items')
+
+  t.deepEqual(
+    await projection.store.read('p2'),
+    expectedItem,
+    'updates the node in the projection store'
+  )
+
+  t.end()
+})
+
+test('projection.handleEvent with an InitHandler', async t => {
+  const store = new PostStore({ items: [post1, post2] })
+  const projection = new PostProjection({ store })
+
+  const updatedItems = await projection.handleEvent({
+    data: { id: 'p3', title: 'Keep It' },
+    meta: {
+      name: 'PostCreated',
+      time: 'now',
+    },
+    key: 'e3',
+  })
+
+  const expectedItem = {
+    data: {
       title: 'Keep It',
       score: 0,
       published: false,
     },
-    typename: 'Post',
-    updatedAt: 'now',
+    meta: {
+      createdAt: 'now',
+      eventKeys: ['e3'],
+      updatedAt: 'now',
+    },
+    key: 'p3',
   }
 
-  t.deepEqual(updatedEdges, [expectedEdge], 'returns an array of updated edges')
+  t.deepEqual(updatedItems, [expectedItem], 'returns an array of updated Items')
 
   t.deepEqual(
     await projection.store.read('p3'),
-    expectedEdge,
+    expectedItem,
     'adds the node to the projection store'
   )
 
@@ -178,24 +154,40 @@ test('projection.handleEvent with an InitHandler', async t => {
 })
 
 test('MockProjection.handleEvent', async t => {
-  const store = new InMemoryStore<PostEdge, PostKey, PostQuery>({
-    getItemKey: post => post.node.id,
+  const store = new InMemoryStore<Post, PostQuery>({
     items: [post1, post2],
   })
 
-  const projection = new MockProjection<Events, Post, PostKey, PostQuery>({
-    typename: 'Post',
-    store,
+  const projection = new MockProjection<
+    EventTypes,
+    EventMeta,
+    EventKey,
+    Post,
+    PostQuery
+  >({
     updates: {
       PostCreated: [[post1]],
     },
+    initMeta: _event => ({
+      createdAt: 'now',
+      eventKeys: ['e1'],
+      updatedAt: 'now',
+    }),
+    updateMeta: (_event, _meta) => ({
+      createdAt: 'now',
+      eventKeys: ['e1'],
+      updatedAt: 'now',
+    }),
+    store,
   })
 
   const updates = await projection.handleEvent({
-    id: 'e3',
-    name: 'PostCreated',
-    data: { id: 'p3', title: 'Keep It', score: 0 },
-    time: 'now',
+    key: 'e3',
+    data: { id: 'p3', title: 'Keep It' },
+    meta: {
+      name: 'PostCreated',
+      time: 'now',
+    },
   })
 
   t.deepEqual(

@@ -1,26 +1,32 @@
 import deepEqual from 'deep-equal'
+import { Item, ItemKey } from './types'
 
-export interface Store<I, K> {
-  read(key: K): Promise<I | undefined>
+export interface Store<I extends Item<any, any, any>> {
+  read(key: ItemKey<I>): Promise<I | undefined>
   write(item: I): Promise<void>
 }
 
-export interface QueryableStore<I, K, Q extends Query<K>> extends Store<I, K> {
-  find(query: Q): Promise<QueryResult<I, K>>
+export interface QueryableStore<
+  I extends Item<any, any, any>,
+  Q extends Query<I>
+> extends Store<I> {
+  find(query: Q): Promise<QueryResult<I>>
 }
 
-export interface Query<K> {
-  cursor?: K
+export interface Query<I extends Item<any, any, any>> {
+  cursor?: ItemKey<I>
   limit?: number
 }
 
-export interface QueryResult<I, K> {
+export interface QueryResult<I extends Item<any, any, any>> {
   items: Array<I>
-  cursor: K | null
+  cursor: ItemKey<I> | null
 }
 
-export type GetItemKey<I, K> = (item: I) => K
-export type KeyToString<K> = (key: K) => string
+export type GetItemKey<I extends Item<any, any, any>> = (item: I) => ItemKey<I>
+export type KeyToString<I extends Item<any, any, any>> = (
+  key: ItemKey<I>
+) => string
 
 export type FilterPredicate<I> = (item: I) => boolean
 
@@ -33,23 +39,19 @@ export const defaultKeyToString = (key: any) => {
   else return JSON.stringify(key)
 }
 
-export interface InMemoryStoreOptions<I, K, Q> {
+export interface InMemoryStoreOptions<I extends Item<any, any, any>, Q> {
   items?: Array<I>
   getFilterPredicates?: GetFilterPredicates<I, Q>
-  getItemKey: GetItemKey<I, K>
-  keyToString?: KeyToString<K>
+  keyToString?: KeyToString<I>
 }
 
-export class InMemoryStore<I, K, Q extends Query<K>>
-  implements QueryableStore<I, K, Q> {
+export class InMemoryStore<I extends Item<any, any, any>, Q extends Query<I>>
+  implements QueryableStore<I, Q> {
   items: { [key: string]: I }
-  getItemKey: GetItemKey<I, K>
-  keyToString: KeyToString<K>
+  keyToString: KeyToString<I>
 
-  constructor(options: InMemoryStoreOptions<I, K, Q>) {
+  constructor(options: InMemoryStoreOptions<I, Q>) {
     this.items = {}
-
-    this.getItemKey = options.getItemKey
     this.keyToString = options.keyToString || defaultKeyToString
 
     if (options.getFilterPredicates)
@@ -57,22 +59,22 @@ export class InMemoryStore<I, K, Q extends Query<K>>
 
     if (options.items) {
       options.items.forEach(item => {
-        const key = this.keyToString(this.getItemKey(item))
+        const key = this.keyToString(item.key)
         this.items[key] = item
       })
     }
   }
 
-  async read(key: K): Promise<I | undefined> {
+  async read(key: ItemKey<I>): Promise<I | undefined> {
     return this.items[this.keyToString(key)]
   }
 
   async write(item: I): Promise<void> {
-    const key = this.keyToString(this.getItemKey(item))
+    const key = this.keyToString(item.key)
     this.items[key] = item
   }
 
-  async find(query: Q): Promise<QueryResult<I, K>> {
+  async find(query: Q): Promise<QueryResult<I>> {
     let items = Object.values(this.items)
 
     const filterPredicates = Array.from(this.getFilterPredicates(query))
@@ -93,11 +95,15 @@ export class InMemoryStore<I, K, Q extends Query<K>>
     return []
   }
 
-  protected paginateItems(items: Array<I>, cursor: K | null, limit?: number) {
+  protected paginateItems(
+    items: Array<I>,
+    cursor: ItemKey<I> | null,
+    limit?: number
+  ) {
     if (cursor) {
       let found = false
       while (!found && items.length) {
-        found = deepEqual(this.getItemKey(items[0]), cursor)
+        found = deepEqual(items[0].key, cursor)
         items.shift()
       }
       if (!found) {
@@ -108,7 +114,7 @@ export class InMemoryStore<I, K, Q extends Query<K>>
 
     if (typeof limit == 'number' && items.length > limit) {
       items = items.slice(0, limit)
-      cursor = items.length ? this.getItemKey(items.slice(-1)[0]) : null
+      cursor = items.length ? items.slice(-1)[0].key : null
     }
 
     return { items, cursor }
