@@ -1,5 +1,5 @@
 import test from 'tape'
-import { InMemoryStore, MockProjection, Projection } from '../src'
+import { InMemoryStore, MockProjection } from '../src'
 
 import {
   EventTypes,

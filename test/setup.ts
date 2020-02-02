@@ -4,7 +4,6 @@ import {
   Events as BaseEvents,
   EmitResult as BaseEmitResult,
   EventName as BaseEventName,
-  EventsProjections,
   InMemoryStore,
   OrdFilter,
   PrefixFilter,
@@ -154,12 +153,12 @@ export class PostProjection extends Projection<
 }
 
 type Projections = {
-  posts: Post
+  posts: PostProjection
 }
 
-interface EventsOptions<EventTypes, EventMeta, EventKey, Projections> {
+interface EventsOptions {
   store: Store<Event>
-  projections: EventsProjections<EventTypes, EventMeta, EventKey, Projections>
+  projections: Projections
 }
 
 export class Events extends BaseEvents<
@@ -168,9 +167,7 @@ export class Events extends BaseEvents<
   EventKey,
   Projections
 > {
-  constructor(
-    options: EventsOptions<EventTypes, EventMeta, EventKey, Projections>
-  ) {
+  constructor(options: EventsOptions) {
     const generateId = sequentialIdGenerator('e')
     const getTime = sequentialIdGenerator('t')
 

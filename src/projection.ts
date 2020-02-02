@@ -1,4 +1,4 @@
-import { Event, EventName } from './events'
+import { Event, EventHandler, EventName } from './events'
 import { Item, ItemData, ItemMeta, ItemKey } from './types'
 import { QueryableStore } from './store'
 
@@ -105,7 +105,8 @@ export interface ProjectionOptions<T, M, K, I extends Item<any, any, any>, Q> {
   updateMeta: (event: Event<T, M, K>, meta: ItemMeta<I>) => ItemMeta<I>
 }
 
-export class Projection<T, M, K, I extends Item<any, any, any>, Q> {
+export class Projection<T, M, K, I extends Item<any, any, any>, Q>
+  implements EventHandler<T, M, K, Array<I>> {
   handlers: ProjectionHandlers<T, M, K, I, Q>
   initMeta: (event: Event<T, M, K>) => ItemMeta<I>
   store: QueryableStore<I, Q>
