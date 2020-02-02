@@ -168,16 +168,6 @@ test('MockProjection.handleEvent', async t => {
     updates: {
       PostCreated: [[post1]],
     },
-    initMeta: _event => ({
-      createdAt: 'now',
-      eventKeys: ['e1'],
-      updatedAt: 'now',
-    }),
-    updateMeta: (_event, _meta) => ({
-      createdAt: 'now',
-      eventKeys: ['e1'],
-      updatedAt: 'now',
-    }),
     store,
   })
 

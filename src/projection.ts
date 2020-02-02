@@ -169,31 +169,19 @@ export type MockProjectionUpdates<T, I extends Item<any, any, any>> = {
   [N in EventName<T>]?: Array<Array<I>>
 }
 
-export interface MockProjectionOptions<
-  T,
-  M,
-  K,
-  I extends Item<any, any, any>,
-  Q
-> {
+export interface MockProjectionOptions<T, I extends Item<any, any, any>, Q> {
   store: QueryableStore<I, Q>
   updates?: MockProjectionUpdates<T, I>
-  initMeta: (event: Event<T, M, K>) => ItemMeta<I>
-  updateMeta: (event: Event<T, M, K>, meta: ItemMeta<I>) => ItemMeta<I>
 }
 
-export class MockProjection<
-  T,
-  M,
-  K,
-  I extends Item<any, any, any>,
-  Q
-> extends Projection<T, M, K, I, Q> {
+export class MockProjection<T, M, K, I extends Item<any, any, any>, Q>
+  implements EventHandler<T, M, K, Array<I>> {
+  store: QueryableStore<I, Q>
   updates: MockProjectionUpdates<T, I>
 
-  constructor({ updates, ...options }: MockProjectionOptions<T, M, K, I, Q>) {
-    super({ handlers: {}, ...options })
+  constructor({ store, updates }: MockProjectionOptions<T, I, Q>) {
     this.updates = updates || {}
+    this.store = store
   }
 
   async handleEvent<N extends EventName<T>>(
