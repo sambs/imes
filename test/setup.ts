@@ -14,7 +14,6 @@ import {
   ordPredicate,
   prefixPredicate,
   QueryableStore,
-  sequentialIdGenerator,
 } from '../src'
 
 export interface EventTypes {
@@ -179,4 +178,9 @@ export class Events extends BaseEvents<
       ...options,
     })
   }
+}
+
+const sequentialIdGenerator = (prefix = '') => {
+  let count = 0
+  return () => `${prefix}${count++}`
 }
