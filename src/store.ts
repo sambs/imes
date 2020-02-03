@@ -1,4 +1,5 @@
 import deepEqual from 'deep-equal'
+import sortKeys from 'sort-keys'
 import { Item, ItemKey } from './types'
 
 export interface Store<I extends Item<any, any, any>> {
@@ -36,7 +37,7 @@ export type GetFilterPredicates<I, Q> = (
 
 export const defaultKeyToString = (key: any) => {
   if (typeof key == 'string') return key
-  else return JSON.stringify(key)
+  else return JSON.stringify(sortKeys(key))
 }
 
 export interface InMemoryStoreOptions<I extends Item<any, any, any>, Q> {

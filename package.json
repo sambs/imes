@@ -25,7 +25,8 @@
     ]
   },
   "dependencies": {
-    "deep-equal": "^2.0.1"
+    "deep-equal": "^2.0.1",
+    "sort-keys": "^4.0.0"
   },
   "devDependencies": {
     "@types/deep-equal": "^1.0.1",

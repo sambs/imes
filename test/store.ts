@@ -9,6 +9,7 @@ import {
   ordPredicate,
   equalPredicate,
   prefixPredicate,
+  defaultKeyToString,
 } from '../src'
 
 interface UserData {
@@ -140,5 +141,14 @@ test('InMemoryStore.find', async t => {
     'filters items by a multiple size predicates'
   )
 
+  t.end()
+})
+
+test('defaultKeyToString', t => {
+  t.equal(
+    defaultKeyToString({ id: 123, pk: 'abc' }),
+    defaultKeyToString({ pk: 'abc', id: 123 }),
+    'returns the same string regardless of the order of an objects keys'
+  )
   t.end()
 })
