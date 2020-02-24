@@ -1,5 +1,6 @@
 export type EqualFilter<T> = {
   eq?: T
+  ne?: T
 }
 
 export type OrdFilter<T> = {
@@ -16,12 +17,13 @@ export type EnumFilter<T> = {
 
 export type PrefixFilter = { prefix?: string }
 
-export const equalPredicate = <T>({ eq }: EqualFilter<T>) => (
+export const equalPredicate = <T>({ eq, ne }: EqualFilter<T>) => (
   x: T | null | undefined
 ) => {
   if (x === undefined || x === null) return false
-  if (eq === undefined) return true
-  else return x === eq
+  if (eq !== undefined && x !== eq) return false
+  if (ne !== undefined && x === ne) return false
+  else return true
 }
 
 export const ordPredicate = <T>({ eq, gt, lt, gte, lte }: OrdFilter<T>) => (
