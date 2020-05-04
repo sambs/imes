@@ -19,8 +19,10 @@ const post1: Post = {
   },
   meta: {
     createdAt: 'yesterday',
+    createdBy: 'u1',
     eventKeys: ['e1'],
     updatedAt: 'yesterday',
+    updatedBy: 'u1',
   },
   key: 'p1',
 }
@@ -33,8 +35,10 @@ const post2 = {
   },
   meta: {
     createdAt: 'yesterday',
+    createdBy: 'u2',
     eventKeys: ['e2'],
     updatedAt: 'yesterday',
+    updatedBy: 'u2',
   },
   key: 'p2',
 }
@@ -49,6 +53,7 @@ test('projection.handleEvent with a SingleTransformHandler', async t => {
     meta: {
       name: 'PostPublished',
       time: 'now',
+      actorId: 'u1',
     },
   })
 
@@ -60,8 +65,10 @@ test('projection.handleEvent with a SingleTransformHandler', async t => {
     },
     meta: {
       createdAt: 'yesterday',
+      createdBy: 'u2',
       eventKeys: ['e2', 'e3'],
       updatedAt: 'now',
+      updatedBy: 'u1',
     },
     key: 'p2',
   }
@@ -86,6 +93,7 @@ test('projection.handleEvent with a ManyTransformHandler', async t => {
     meta: {
       name: 'AllPostsPublished',
       time: 'now',
+      actorId: 'u1',
     },
     key: 'e3',
   })
@@ -98,8 +106,10 @@ test('projection.handleEvent with a ManyTransformHandler', async t => {
     },
     meta: {
       createdAt: 'yesterday',
+      createdBy: 'u2',
       eventKeys: ['e2', 'e3'],
       updatedAt: 'now',
+      updatedBy: 'u1',
     },
     key: 'p2',
   }
@@ -124,6 +134,7 @@ test('projection.handleEvent with an InitHandler', async t => {
     meta: {
       name: 'PostCreated',
       time: 'now',
+      actorId: 'u1',
     },
     key: 'e3',
   })
@@ -136,8 +147,10 @@ test('projection.handleEvent with an InitHandler', async t => {
     },
     meta: {
       createdAt: 'now',
+      createdBy: 'u1',
       eventKeys: ['e3'],
       updatedAt: 'now',
+      updatedBy: 'u1',
     },
     key: 'p3',
   }
@@ -177,6 +190,7 @@ test('MockProjection.handleEvent', async t => {
     meta: {
       name: 'PostCreated',
       time: 'now',
+      actorId: 'u1',
     },
   })
 

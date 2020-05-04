@@ -16,6 +16,10 @@ import {
   QueryableStore,
 } from '../src'
 
+export interface Context {
+  actorId: string
+}
+
 export interface EventTypes {
   PostCreated: {
     id: string
@@ -28,8 +32,9 @@ export interface EventTypes {
 }
 
 export interface EventMeta {
-  time: string
+  actorId: string
   name: string
+  time: string
 }
 
 export type EventKey = string
@@ -61,8 +66,10 @@ export type PostKey = string
 
 export interface PostMeta {
   createdAt: string
+  createdBy: string
   eventKeys: EventKey[]
   updatedAt: string
+  updatedBy: string
 }
 
 export interface Post {
@@ -136,15 +143,18 @@ export class PostProjection extends Projection<
           transform: (_, post) => ({ ...post, published: true }),
         },
       },
-      initMeta: ({ key }) => ({
+      initMeta: ({ key, meta: { actorId } }) => ({
         createdAt: 'now',
+        createdBy: actorId,
         eventKeys: [key],
         updatedAt: 'now',
+        updatedBy: actorId,
       }),
-      updateMeta: ({ key }, { createdAt, eventKeys }) => ({
-        createdAt,
+      updateMeta: ({ key, meta: { actorId } }, { eventKeys, ...meta }) => ({
+        ...meta,
         eventKeys: [...eventKeys, key],
         updatedAt: 'now',
+        updatedBy: actorId,
       }),
       ...options,
     })
@@ -164,17 +174,18 @@ export class Events extends BaseEvents<
   EventTypes,
   EventMeta,
   EventKey,
-  Projections
+  Projections,
+  Context
 > {
   constructor(options: EventsOptions) {
     const generateId = sequentialIdGenerator('e')
     const getTime = sequentialIdGenerator('t')
 
     super({
-      getMeta: name => {
-        return { name, time: getTime() }
+      getMeta: (name, context) => {
+        return { name, time: getTime(), ...context }
       },
-      getKey: _event => generateId(),
+      getKey: (_name, _context) => generateId(),
       ...options,
     })
   }

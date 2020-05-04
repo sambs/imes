@@ -46,10 +46,11 @@ export interface PostEmit<T, M, K, P extends Projections<T, M, K>> {
   <N extends EventName<T>>(event: EmitResult<T, M, K, P, N>): void
 }
 
-export interface EventEmitter<T, M, K, P extends Projections<T, M, K>> {
+export interface EventEmitter<T, M, K, P extends Projections<T, M, K>, C> {
   emit<N extends EventName<T>>(
     name: N,
-    data: EventData<T, N>
+    data: EventData<T, N>,
+    context: C
   ): Promise<EmitResult<T, M, K, P, N>>
 }
 
@@ -59,28 +60,29 @@ export interface EventStorer<T, M, K> {
   store: EventStore<T, M, K>
 }
 
-export type GetKey<T, K> = <N extends EventName<T>>(
+export type GetKey<T, K, C> = <N extends EventName<T>>(
   name: N,
-  data: EventData<T, N>
+  data: EventData<T, N>,
+  context: C
 ) => K
 
-export type GetMeta<T, M> = <N extends EventName<T>>(
+export type GetMeta<T, M, C> = <N extends EventName<T>>(
   name: N,
-  data: EventData<T, N>
+  context: C
 ) => EventMeta<T, M, N>
 
-export interface EventsOptions<T, M, K, P extends Projections<T, M, K>> {
-  getKey: GetKey<T, K>
-  getMeta: GetMeta<T, M>
+export interface EventsOptions<T, M, K, P extends Projections<T, M, K>, C> {
+  getKey: GetKey<T, K, C>
+  getMeta: GetMeta<T, M, C>
   postEmit?: PostEmit<T, M, K, P>
   projections: P
   store: EventStore<T, M, K>
 }
 
-export class Events<T, M, K, P extends Projections<T, M, K>>
-  implements EventEmitter<T, M, K, P>, EventStorer<T, M, K> {
-  getKey: GetKey<T, K>
-  getMeta: GetMeta<T, M>
+export class Events<T, M, K, P extends Projections<T, M, K>, C>
+  implements EventEmitter<T, M, K, P, C>, EventStorer<T, M, K> {
+  getKey: GetKey<T, K, C>
+  getMeta: GetMeta<T, M, C>
   postEmit?: PostEmit<T, M, K, P>
   projections: P
   store: EventStore<T, M, K>
@@ -91,7 +93,7 @@ export class Events<T, M, K, P extends Projections<T, M, K>>
     postEmit,
     projections,
     store,
-  }: EventsOptions<T, M, K, P>) {
+  }: EventsOptions<T, M, K, P, C>) {
     this.getKey = getKey
     this.getMeta = getMeta
     this.postEmit = postEmit
@@ -113,12 +115,13 @@ export class Events<T, M, K, P extends Projections<T, M, K>>
 
   async emit<N extends EventName<T>>(
     name: N,
-    data: EventData<T, N>
+    data: EventData<T, N>,
+    context: C
   ): Promise<EmitResult<T, M, K, P, N>> {
     const event = {
       data,
-      meta: this.getMeta(name, data),
-      key: this.getKey(name, data),
+      meta: this.getMeta(name, context),
+      key: this.getKey(name, data, context),
     }
 
     await this.store.write(event)

@@ -10,6 +10,8 @@ import {
   PostStore,
 } from './setup'
 
+const context = { actorId: 'u1' }
+
 const eventData = {
   id: 'p1',
   title: 'Event Sourcing Explained',
@@ -17,12 +19,18 @@ const eventData = {
 
 const event = {
   data: eventData,
-  meta: { name: 'PostCreated', time: 't0' },
+  meta: { name: 'PostCreated', time: 't0', actorId: 'u1' },
   key: 'e0',
 }
 const post = {
   data: { published: false, title: 'Event Sourcing Explained', score: 0 },
-  meta: { createdAt: 'now', eventKeys: ['e0'], updatedAt: 'now' },
+  meta: {
+    createdAt: 'now',
+    createdBy: 'u1',
+    eventKeys: ['e0'],
+    updatedAt: 'now',
+    updatedBy: 'u1',
+  },
   key: 'p1',
 }
 
@@ -46,7 +54,7 @@ const setup = (options?: TestEventsOptions) => {
 test('Events.emit', async t => {
   const { events, posts } = setup()
 
-  const result = await events.emit('PostCreated', eventData)
+  const result = await events.emit('PostCreated', eventData, context)
 
   t.deepEqual(result, { event, updates: { posts: [post] } })
 
@@ -66,7 +74,7 @@ test('Events.postEmit', async t => {
     },
   })
 
-  await events.emit('PostCreated', eventData)
+  await events.emit('PostCreated', eventData, context)
 })
 
 test('Events.load', async t => {
