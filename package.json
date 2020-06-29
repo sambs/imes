@@ -13,14 +13,6 @@
     "test": "tape -r ts-node/register test/**/*.ts",
     "test-w": "onchange -i 'src/**/*.ts' -- yarn test"
   },
-  "husky": {
-    "hooks": {
-      "pre-commit": "lint-staged"
-    }
-  },
-  "lint-staged": {
-    "*.{ts,tsx}": ["prettier --write"]
-  },
   "dependencies": {
     "deep-equal": "^2.0.1",
     "sort-keys": "^4.0.0"
