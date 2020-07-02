@@ -4,6 +4,7 @@ import { InMemoryStore } from '../src'
 
 import {
   EmitResult,
+  Event,
   Events,
   EventName,
   PostProjection,
@@ -17,7 +18,7 @@ const eventData = {
   title: 'Event Sourcing Explained',
 }
 
-const event = {
+const event: Event = {
   data: eventData,
   meta: { name: 'PostCreated', time: 't0', actorId: 'u1' },
   key: 'e0',
@@ -82,11 +83,9 @@ test('Events.postEmit', async t => {
 test('Events.load', async t => {
   const { events, posts } = setup()
 
-  const stream = Readable.from([event])
+  await events.load([event])
 
-  await events.load(stream)
-
-  t.deepEqual(await posts.store.read('p1'), post, 'populates projectios')
+  t.deepEqual(await posts.store.read('p1'), post, 'populates projections')
 
   t.deepEqual(
     await events.store.read('e0'),
@@ -109,6 +108,18 @@ test('Events.load with write option', async t => {
     event,
     'writes the event to the Events store'
   )
+
+  t.end()
+})
+
+test('Events.load from a stream', async t => {
+  const { events, posts } = setup()
+
+  const stream = Readable.from([event])
+
+  await events.load(stream)
+
+  t.deepEqual(await posts.store.read('p1'), post, 'populates projections')
 
   t.end()
 })

@@ -101,10 +101,13 @@ export class Events<T, M, K, P extends Projections<T, M, K>, C>
     this.store = store
   }
 
-  async load(stream: Readable, options?: { write: boolean }) {
+  async load(
+    events: Readable | Iterable<Event<T, M, K>>,
+    options?: { write: boolean }
+  ) {
     options = { write: false, ...options }
 
-    for await (const event of stream) {
+    for await (const event of events) {
       await this.updateProjections(event)
 
       if (options.write) {
