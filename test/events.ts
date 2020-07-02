@@ -75,6 +75,8 @@ test('Events.postEmit', async t => {
   })
 
   await events.emit('PostCreated', eventData, context)
+
+  await new Promise(process.nextTick)
 })
 
 test('Events.load', async t => {
