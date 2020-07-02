@@ -1,6 +1,6 @@
-import { Event, EventHandler, EventName } from './events'
-import { Item, ItemData, ItemMeta, ItemKey } from './types'
-import { QueryableStore } from './store'
+import { Event, EventHandler, EventName } from './events.js'
+import { Item, ItemData, ItemMeta, ItemKey } from './types.js'
+import { QueryableStore } from './store.js'
 
 export interface InitHandler<
   T,

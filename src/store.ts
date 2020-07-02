@@ -1,6 +1,6 @@
 import deepEqual from 'deep-equal'
 import sortKeys from 'sort-keys'
-import { Item, ItemKey } from './types'
+import { Item, ItemKey } from './types.js'
 
 export interface Store<I extends Item<any, any, any>> {
   read(key: ItemKey<I>): Promise<I | undefined>

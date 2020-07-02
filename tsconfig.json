@@ -1,27 +1,14 @@
 {
   "compilerOptions": {
-    "module": "commonjs",
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "declaration": true,
     "target": "es2019",
-    "lib": [
-      "es2018"
-    ],
+    "lib": ["es2018"],
     "strict": true,
     "moduleResolution": "node",
-    "sourceMap": true,
-    "outDir": "dist",
-    "baseUrl": ".",
-    "paths": {
-      "*": [
-        "node_modules/*"
-      ]
-    }
+    "rootDir": "src",
+    "sourceMap": true
   },
-  "include": [
-    "src/**/*.ts",
-    "test/**/*.ts"
-  ],
-  "exclude": []
+  "include": ["src/**/*.ts"]
 }

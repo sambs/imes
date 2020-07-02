@@ -3,10 +3,16 @@
   "description": "In-memory event sourcing",
   "version": "0.7.0",
   "license": "MIT",
-  "main": "dist/src/index.js",
-  "types": "dist/src/index.d.ts",
+  "main": "dist/cjs/index.js",
+  "types": "dist/esm/index.d.ts",
+  "files": ["dist"],
+  "type": "module",
+  "exports": {
+    "require": "./dist/cjs/index.js",
+    "import": "./dist/esm/index.js"
+  },
   "scripts": {
-    "build": "npm run clean && tsc",
+    "build": "npm run clean && tsc -p ./tsconfig-cjs.json && tsc -p ./tsconfig-esm.json && echo '{ \"type\": \"commonjs\" }' > dist/cjs/package.json",
     "clean": "rimraf dist/*",
     "prepublish": "npm run build",
     "prettify": "prettier --write 'src/**/*.ts'",

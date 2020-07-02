@@ -1,5 +1,5 @@
 import { Readable } from 'stream'
-import { Store } from './store'
+import { Store } from './store.js'
 
 export type Event<T, M, K, N extends EventName<T> = EventName<T>> = {
   data: EventData<T, N>
