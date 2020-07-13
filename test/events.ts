@@ -59,8 +59,8 @@ test('Events.emit', async t => {
 
   t.deepEqual(result, { event, updates: { posts: [post] } })
 
-  t.deepEqual(await posts.store.read('p1'), post)
-  t.deepEqual(await events.store.read('e0'), event)
+  t.deepEqual(await posts.store.get('p1'), post)
+  t.deepEqual(await events.store.get('e0'), event)
 
   t.end()
 })
@@ -85,10 +85,10 @@ test('Events.load', async t => {
 
   await events.load([event])
 
-  t.deepEqual(await posts.store.read('p1'), post, 'populates projections')
+  t.deepEqual(await posts.store.get('p1'), post, 'populates projections')
 
   t.deepEqual(
-    await events.store.read('e0'),
+    await events.store.get('e0'),
     undefined,
     'does not write the event to the Events store'
   )
@@ -104,7 +104,7 @@ test('Events.load with write option', async t => {
   await events.load(stream, { write: true })
 
   t.deepEqual(
-    await events.store.read('e0'),
+    await events.store.get('e0'),
     event,
     'writes the event to the Events store'
   )
@@ -119,7 +119,7 @@ test('Events.load from a stream', async t => {
 
   await events.load(stream)
 
-  t.deepEqual(await posts.store.read('p1'), post, 'populates projections')
+  t.deepEqual(await posts.store.get('p1'), post, 'populates projections')
 
   t.end()
 })

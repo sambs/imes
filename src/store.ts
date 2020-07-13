@@ -3,8 +3,9 @@ import sortKeys from 'sort-keys'
 import { Item, ItemKey } from './types'
 
 export interface Store<I extends Item<any, any, any>> {
-  read(key: ItemKey<I>): Promise<I | undefined>
-  write(item: I): Promise<void>
+  get(key: ItemKey<I>): Promise<I | undefined>
+  create(item: I): Promise<void>
+  update(item: I): Promise<void>
 }
 
 export interface QueryableStore<
@@ -66,11 +67,19 @@ export class InMemoryStore<I extends Item<any, any, any>, Q extends Query<I>>
     }
   }
 
-  async read(key: ItemKey<I>): Promise<I | undefined> {
+  async get(key: ItemKey<I>): Promise<I | undefined> {
     return this.items[this.keyToString(key)]
   }
 
-  async write(item: I): Promise<void> {
+  async create(item: I): Promise<void> {
+    this.put(item)
+  }
+
+  async update(item: I): Promise<void> {
+    this.put(item)
+  }
+
+  async put(item: I): Promise<void> {
     const key = this.keyToString(item.key)
     this.items[key] = item
   }

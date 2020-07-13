@@ -111,7 +111,7 @@ export class Events<T, M, K, P extends Projections<T, M, K>, C>
       await this.updateProjections(event)
 
       if (options.write) {
-        await this.store.write(event)
+        await this.store.create(event)
       }
     }
   }
@@ -127,7 +127,7 @@ export class Events<T, M, K, P extends Projections<T, M, K>, C>
       key: this.getKey(name, data, context),
     }
 
-    await this.store.write(event)
+    await this.store.create(event)
 
     const updates = await this.updateProjections(event)
 

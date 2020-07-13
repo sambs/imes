@@ -134,16 +134,16 @@ export class Projection<T, M, K, I extends Item<any, any, any>, Q>
     if (handler == undefined) {
       return []
     } else if (isInitHandler(handler)) {
-      items = [
-        {
-          data: handler.init(event),
-          meta: this.initMeta(event),
-          key: handler.key(event),
-        } as I,
-      ]
+      const item = {
+        data: handler.init(event),
+        meta: this.initMeta(event),
+        key: handler.key(event),
+      } as I
+      items = [item]
+      await this.store.create(item)
     } else {
       if (isSingleTransformHandler(handler)) {
-        const item = await this.store.read(handler.selectOne(event))
+        const item = await this.store.get(handler.selectOne(event))
         if (item !== undefined) items = [item]
       } else if (isManyTransformHandler(handler)) {
         const connection = await this.store.find(handler.selectMany(event))
@@ -157,43 +157,9 @@ export class Projection<T, M, K, I extends Item<any, any, any>, Q>
             key,
           } as I)
       )
+      await Promise.all(items.map(item => this.store.update(item)))
     }
-
-    await Promise.all(items.map(item => this.store.write(item)))
 
     return items
-  }
-}
-
-export type MockProjectionUpdates<T, I extends Item<any, any, any>> = {
-  [N in EventName<T>]?: Array<Array<I>>
-}
-
-export interface MockProjectionOptions<T, I extends Item<any, any, any>, Q> {
-  store: QueryableStore<I, Q>
-  updates?: MockProjectionUpdates<T, I>
-}
-
-export class MockProjection<T, M, K, I extends Item<any, any, any>, Q>
-  implements EventHandler<T, M, K, Array<I>> {
-  store: QueryableStore<I, Q>
-  updates: MockProjectionUpdates<T, I>
-
-  constructor({ store, updates }: MockProjectionOptions<T, I, Q>) {
-    this.updates = updates || {}
-    this.store = store
-  }
-
-  async handleEvent<N extends EventName<T>>(
-    event: Event<T, M, K, N>
-  ): Promise<I[]> {
-    const updates = this.updates[event.meta.name]
-    if (updates) {
-      const edges = updates.shift() || []
-      await Promise.all(edges.map(edge => this.store.write(edge)))
-      return edges
-    } else {
-      return []
-    }
   }
 }

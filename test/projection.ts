@@ -1,15 +1,5 @@
 import test from 'tape'
-import { InMemoryStore, MockProjection } from '../src'
-
-import {
-  EventTypes,
-  EventMeta,
-  EventKey,
-  Post,
-  PostQuery,
-  PostStore,
-  PostProjection,
-} from './setup'
+import { Post, PostStore, PostProjection } from './setup'
 
 const post1: Post = {
   data: {
@@ -76,7 +66,7 @@ test('projection.handleEvent with a SingleTransformHandler', async t => {
   t.deepEqual(updatedItems, [expectedItem], 'returns an array of updated Items')
 
   t.deepEqual(
-    await projection.store.read('p2'),
+    await projection.store.get('p2'),
     expectedItem,
     'updates the node in the projection store'
   )
@@ -117,7 +107,7 @@ test('projection.handleEvent with a ManyTransformHandler', async t => {
   t.deepEqual(updatedItems, [expectedItem], 'returns an array of updated Items')
 
   t.deepEqual(
-    await projection.store.read('p2'),
+    await projection.store.get('p2'),
     expectedItem,
     'updates the node in the projection store'
   )
@@ -158,46 +148,9 @@ test('projection.handleEvent with an InitHandler', async t => {
   t.deepEqual(updatedItems, [expectedItem], 'returns an array of updated Items')
 
   t.deepEqual(
-    await projection.store.read('p3'),
+    await projection.store.get('p3'),
     expectedItem,
-    'adds the node to the projection store'
-  )
-
-  t.end()
-})
-
-test('MockProjection.handleEvent', async t => {
-  const store = new InMemoryStore<Post, PostQuery>({
-    items: [post1, post2],
-  })
-
-  const projection = new MockProjection<
-    EventTypes,
-    EventMeta,
-    EventKey,
-    Post,
-    PostQuery
-  >({
-    updates: {
-      PostCreated: [[post1]],
-    },
-    store,
-  })
-
-  const updates = await projection.handleEvent({
-    key: 'e3',
-    data: { id: 'p3', title: 'Keep It' },
-    meta: {
-      name: 'PostCreated',
-      time: 'now',
-      actorId: 'u1',
-    },
-  })
-
-  t.deepEqual(
-    updates,
-    [post1],
-    'returns the specified updates ignoring event data'
+    'creates the node in the projection store'
   )
 
   t.end()

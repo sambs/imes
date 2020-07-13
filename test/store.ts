@@ -64,7 +64,7 @@ const user3: User = {
 }
 
 const store = new InMemoryStore<User, UserQuery>({
-  getFilterPredicates: function*({ filter }) {
+  getFilterPredicates: function* ({ filter }) {
     if (filter) {
       if (filter.name !== undefined) {
         yield item => equalPredicate(filter.name!)(item.data.name)
@@ -78,11 +78,11 @@ const store = new InMemoryStore<User, UserQuery>({
   items: [user1, user2, user3],
 })
 
-test('InMemoryStore.read', async t => {
-  t.deepEqual(await store.read('u1'), user1, 'returns a stored item')
+test('InMemoryStore.get', async t => {
+  t.deepEqual(await store.get('u1'), user1, 'returns a stored item')
 
   t.equal(
-    await store.read('dne'),
+    await store.get('dne'),
     undefined,
     'returns undefined when asked for a non-existant key'
   )
