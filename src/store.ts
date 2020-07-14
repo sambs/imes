@@ -25,7 +25,6 @@ export interface QueryResult<I extends Item<any, any, any>> {
   cursor: ItemKey<I> | null
 }
 
-export type GetItemKey<I extends Item<any, any, any>> = (item: I) => ItemKey<I>
 export type KeyToString<I extends Item<any, any, any>> = (
   key: ItemKey<I>
 ) => string
