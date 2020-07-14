@@ -18,6 +18,7 @@ export interface QueryableStore<
 export interface Query<I extends Item<any, any, any>> {
   cursor?: ItemKey<I>
   limit?: number
+  filter?: { [field: string]: any }
 }
 
 export interface QueryResult<I extends Item<any, any, any>> {
