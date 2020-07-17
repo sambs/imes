@@ -6,6 +6,9 @@ export interface Store<I extends Item<any, any, any>> {
   get(key: ItemKey<I>): Promise<I | undefined>
   create(item: I): Promise<void>
   update(item: I): Promise<void>
+  clear(): Promise<void>
+  setup(): Promise<void>
+  teardown(): Promise<void>
 }
 
 export interface QueryableStore<
@@ -129,4 +132,11 @@ export class InMemoryStore<I extends Item<any, any, any>, Q extends Query<I>>
 
     return { items, cursor }
   }
+
+  async clear() {
+    this.items = {}
+  }
+
+  async setup() {}
+  async teardown() {}
 }
