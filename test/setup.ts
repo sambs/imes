@@ -1,16 +1,16 @@
 import {
-  EqualFilter,
   Event as BaseEvent,
   Events as BaseEvents,
   EmitResult as BaseEmitResult,
   EventName as BaseEventName,
+  ExactFilter,
   InMemoryStore,
   OrdFilter,
   PrefixFilter,
   Projection,
   Query,
   Store,
-  equalPredicate,
+  exactPredicate,
   ordPredicate,
   prefixPredicate,
   QueryableStore,
@@ -80,8 +80,8 @@ export interface Post {
 
 export interface PostQuery extends Query<Post> {
   filter?: {
-    title?: EqualFilter<string> & PrefixFilter
-    published?: EqualFilter<boolean>
+    title?: ExactFilter<string> & PrefixFilter
+    published?: ExactFilter<boolean>
     score?: OrdFilter<number>
   }
 }
@@ -93,13 +93,13 @@ export interface PostStoreOptions {
 export class PostStore extends InMemoryStore<Post, PostQuery> {
   constructor(options?: PostStoreOptions) {
     super({
-      getFilterPredicates: function*({ filter }) {
+      getFilterPredicates: function* ({ filter }) {
         if (filter) {
           if (filter.published !== undefined) {
-            yield item => equalPredicate(filter.published!)(item.data.published)
+            yield item => exactPredicate(filter.published!)(item.data.published)
           }
           if (filter.title !== undefined) {
-            yield item => equalPredicate(filter.title!)(item.data.title)
+            yield item => exactPredicate(filter.title!)(item.data.title)
             yield item => prefixPredicate(filter.title!)(item.data.title)
           }
           if (filter.score !== undefined) {

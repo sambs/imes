@@ -1,6 +1,7 @@
-export type EqualFilter<T> = {
+export type ExactFilter<T> = {
   eq?: T
   ne?: T
+  in?: Array<T>
 }
 
 export type OrdFilter<T> = {
@@ -11,18 +12,15 @@ export type OrdFilter<T> = {
   lte?: T
 }
 
-export type EnumFilter<T> = {
-  in?: Array<T>
-}
-
 export type PrefixFilter = { prefix?: string }
 
-export const equalPredicate = <T>({ eq, ne }: EqualFilter<T>) => (
+export const exactPredicate = <T>({ eq, ne, in: _in }: ExactFilter<T>) => (
   x: T | null | undefined
 ) => {
   if (x === undefined || x === null) return false
   if (eq !== undefined && x !== eq) return false
   if (ne !== undefined && x === ne) return false
+  if (_in !== undefined && !_in.includes(x)) return false
   else return true
 }
 
@@ -36,14 +34,6 @@ export const ordPredicate = <T>({ eq, gt, lt, gte, lte }: OrdFilter<T>) => (
   if (lt !== undefined && x >= lt) return false
   if (lte !== undefined && x > lte) return false
   else return true
-}
-
-export const enumPredicate = <T>(filter: EnumFilter<T>) => (
-  x: T | null | undefined
-) => {
-  if (x === undefined || x === null) return false
-  if (filter.in === undefined) return true
-  else return filter.in.includes(x)
 }
 
 export const prefixPredicate = ({ prefix }: PrefixFilter) => (x?: string) => {

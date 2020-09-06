@@ -1,13 +1,13 @@
 import test from 'tape'
 
 import {
-  OrdFilter,
-  EqualFilter,
+  ExactFilter,
   InMemoryStore,
+  OrdFilter,
   PrefixFilter,
   Query,
+  exactPredicate,
   ordPredicate,
-  equalPredicate,
   prefixPredicate,
   defaultKeyToString,
 } from '../src'
@@ -31,7 +31,7 @@ interface User {
 
 interface UserQuery extends Query<User> {
   filter?: {
-    name?: EqualFilter<string> & PrefixFilter
+    name?: ExactFilter<string> & PrefixFilter
     age?: OrdFilter<number>
   }
 }
@@ -67,7 +67,7 @@ const store = new InMemoryStore<User, UserQuery>({
   getFilterPredicates: function* ({ filter }) {
     if (filter) {
       if (filter.name !== undefined) {
-        yield item => equalPredicate(filter.name!)(item.data.name)
+        yield item => exactPredicate(filter.name!)(item.data.name)
         yield item => prefixPredicate(filter.name!)(item.data.name)
       }
       if (filter.age !== undefined) {
