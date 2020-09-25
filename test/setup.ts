@@ -119,9 +119,7 @@ export interface PostProjectionOptions {
 }
 
 export class PostProjection extends Projection<
-  EventTypes,
-  EventMeta,
-  EventKey,
+  Event,
   Post,
   PostKey,
   PostMeta,
@@ -134,7 +132,7 @@ export class PostProjection extends Projection<
           init: ({ payload }) => ({
             published: false,
             score: 0,
-            ...payload,
+            ...event.payload,
           }),
         },
         PostPublished: {
