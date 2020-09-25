@@ -64,6 +64,7 @@ const user3: User = {
 }
 
 const store = new InMemoryStore<User, UserQuery>({
+  getItemKey: ({ key }) => key,
   getFilterPredicates: function* ({ filter }) {
     if (filter) {
       if (filter.name !== undefined) {

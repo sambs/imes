@@ -1,8 +1,4 @@
-export type Item<D, M, K> = {
-  data: D
-  meta: M
-  key: K
-}
+export type Item<D, M, K> = D & M & K
 
 export type ItemData<I extends Item<any, any, any>> = I extends Item<
   infer D,

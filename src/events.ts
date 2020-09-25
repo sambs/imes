@@ -1,15 +1,20 @@
 import { Readable } from 'stream'
 import { Store } from './store'
 
-export type Event<T, M, K, N extends EventName<T> = EventName<T>> = {
-  data: EventData<T, N>
-  meta: EventMeta<T, M, N>
-  key: K
-}
+export type Event<
+  T, // { [EventName: string]: EventPayload }
+  M extends {}, // {
+  K extends {},
+  N extends EventName<T> = EventName<T>
+> = EventPayload<T, N> & EventMeta<T, M, N> & K
 
 export type EventName<T> = keyof T
 
 export type EventData<T, N extends EventName<T> = EventName<T>> = T[N]
+
+export type EventPayload<T, N extends EventName<T>> = {
+  payload: EventData<T, N>
+}
 
 export type EventMeta<T, M, N extends EventName<T> = EventName<T>> = M & {
   name: N
@@ -118,13 +123,13 @@ export class Events<T, M, K, P extends Projections<T, M, K>, C>
 
   async emit<N extends EventName<T>>(
     name: N,
-    data: EventData<T, N>,
+    payload: EventData<T, N>,
     context: C
   ): Promise<EmitResult<T, M, K, P, N>> {
     const event = {
-      data,
-      meta: this.getMeta(name, context),
-      key: this.getKey(name, data, context),
+      payload,
+      ...this.getMeta(name, context),
+      ...this.getKey(name, payload, context),
     }
 
     await this.store.create(event)
@@ -145,6 +150,7 @@ export class Events<T, M, K, P extends Projections<T, M, K>, C>
   ): Promise<ProjectionUpdates<T, M, K, P>> {
     let updates: Partial<ProjectionUpdates<T, M, K, P>> = {}
 
+    // Todo: parallelize
     for (let key in this.projections) {
       const projection = this.projections[key]
       updates[key] = await projection.handleEvent(event)

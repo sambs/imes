@@ -33,6 +33,8 @@ export type KeyToString<I extends Item<any, any, any>> = (
   key: ItemKey<I>
 ) => string
 
+export type GetItemKey<I extends Item<any, any, any>> = (item: I) => ItemKey<I>
+
 export type FilterPredicate<I> = (item: I) => boolean
 
 export type GetFilterPredicates<I, Q> = (
@@ -48,15 +50,18 @@ export interface InMemoryStoreOptions<I extends Item<any, any, any>, Q> {
   items?: Array<I>
   getFilterPredicates?: GetFilterPredicates<I, Q>
   keyToString?: KeyToString<I>
+  getItemKey: GetItemKey<I>
 }
 
 export class InMemoryStore<I extends Item<any, any, any>, Q extends Query<I>>
   implements QueryableStore<I, Q> {
   items: { [key: string]: I }
   keyToString: KeyToString<I>
+  getItemKey: GetItemKey<I>
 
   constructor(options: InMemoryStoreOptions<I, Q>) {
     this.items = {}
+    this.getItemKey = options.getItemKey
     this.keyToString = options.keyToString || defaultKeyToString
 
     if (options.getFilterPredicates)
@@ -64,8 +69,9 @@ export class InMemoryStore<I extends Item<any, any, any>, Q extends Query<I>>
 
     if (options.items) {
       options.items.forEach(item => {
-        const key = this.keyToString(item.key)
-        this.items[key] = item
+        const key = this.getItemKey(item)
+        const stringKey = this.keyToString(key)
+        this.items[stringKey] = item
       })
     }
   }
@@ -83,8 +89,9 @@ export class InMemoryStore<I extends Item<any, any, any>, Q extends Query<I>>
   }
 
   async put(item: I): Promise<void> {
-    const key = this.keyToString(item.key)
-    this.items[key] = item
+    const key = this.getItemKey(item)
+    const stringKey = this.keyToString(key)
+    this.items[stringKey] = item
   }
 
   async find(query: Q): Promise<QueryResult<I>> {
@@ -116,7 +123,7 @@ export class InMemoryStore<I extends Item<any, any, any>, Q extends Query<I>>
     if (cursor) {
       let found = false
       while (!found && items.length) {
-        found = deepEqual(items[0].key, cursor)
+        found = deepEqual(this.getItemKey(items[0]), cursor)
         items.shift()
       }
       if (!found) {
@@ -127,7 +134,7 @@ export class InMemoryStore<I extends Item<any, any, any>, Q extends Query<I>>
 
     if (typeof limit == 'number' && items.length > limit) {
       items = items.slice(0, limit)
-      cursor = items.length ? items.slice(-1)[0].key : null
+      cursor = items.length ? this.getItemKey(items.slice(-1)[0]) : null
     }
 
     return { items, cursor }
