@@ -3,8 +3,8 @@ import { Store } from './store'
 
 export type Event<
   T, // { [EventName: string]: EventPayload }
-  M extends {}, // {
-  K extends {},
+  M extends {}, // { name: string } // meta - must include and name property
+  K extends {}, // key - for examples { id: string }
   N extends EventName<T> = EventName<T>
 > = EventPayload<T, N> & EventMeta<T, M, N> & K
 
@@ -59,7 +59,7 @@ export interface EventEmitter<T, M, K, P extends Projections<T, M, K>, C> {
   ): Promise<EmitResult<T, M, K, P, N>>
 }
 
-export type EventStore<T, M, K> = Store<Event<T, M, K, EventName<T>>>
+export type EventStore<T, M, K> = Store<Event<T, M, K, EventName<T>>, K>
 
 export interface EventStorer<T, M, K> {
   store: EventStore<T, M, K>

@@ -1,14 +1,15 @@
 import test from 'tape'
 import { Readable } from 'stream'
-import { InMemoryStore } from '../src'
 
 import {
   EmitResult,
   Event,
   Events,
   EventName,
+  EventStore,
   PostProjection,
   PostStore,
+  Post,
 } from './setup'
 
 const context = { actorId: 'u1' }
@@ -19,20 +20,22 @@ const eventData = {
 }
 
 const event: Event = {
-  data: eventData,
-  meta: { name: 'PostCreated', time: 't0', actorId: 'u1' },
-  key: 'e0',
+  actorId: 'u1',
+  id: 'e0',
+  name: 'PostCreated',
+  payload: eventData,
+  time: 't0',
 }
-const post = {
-  data: { published: false, title: 'Event Sourcing Explained', score: 0 },
-  meta: {
-    createdAt: 'now',
-    createdBy: 'u1',
-    eventKeys: ['e0'],
-    updatedAt: 'now',
-    updatedBy: 'u1',
-  },
-  key: 'p1',
+const post: Post = {
+  createdAt: 'now',
+  createdBy: 'u1',
+  eventIds: ['e0'],
+  id: 'p1',
+  published: false,
+  score: 0,
+  title: 'Event Sourcing Explained',
+  updatedAt: 'now',
+  updatedBy: 'u1',
 }
 
 type TestEventsOptions = {
@@ -42,7 +45,7 @@ type TestEventsOptions = {
 const setup = (options?: TestEventsOptions) => {
   const postStore = new PostStore()
   const posts = new PostProjection({ store: postStore })
-  const eventStore = new InMemoryStore({})
+  const eventStore = new EventStore()
   const events = new Events({
     projections: { posts },
     store: eventStore,
@@ -60,7 +63,7 @@ test('Events.emit', async t => {
   t.deepEqual(result, { event, updates: { posts: [post] } })
 
   t.deepEqual(await posts.store.get('p1'), post)
-  t.deepEqual(await events.store.get('e0'), event)
+  t.deepEqual(await events.store.get({ id: 'e0' }), event)
 
   t.end()
 })
@@ -88,7 +91,7 @@ test('Events.load', async t => {
   t.deepEqual(await posts.store.get('p1'), post, 'populates projections')
 
   t.deepEqual(
-    await events.store.get('e0'),
+    await events.store.get({ id: 'e0' }),
     undefined,
     'does not write the event to the Events store'
   )
@@ -104,7 +107,7 @@ test('Events.load with write option', async t => {
   await events.load(stream, { write: true })
 
   t.deepEqual(
-    await events.store.get('e0'),
+    await events.store.get({ id: 'e0' }),
     event,
     'writes the event to the Events store'
   )

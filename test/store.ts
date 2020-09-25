@@ -13,6 +13,7 @@ import {
 } from '../src'
 
 interface UserData {
+  id: string
   name: string
   age: number | null
 }
@@ -23,13 +24,9 @@ interface UserMeta {
   createdAt: string
 }
 
-interface User {
-  data: UserData
-  meta: UserMeta
-  key: UserKey
-}
+type User = UserData & UserMeta
 
-interface UserQuery extends Query<User> {
+interface UserQuery extends Query<UserKey> {
   filter?: {
     name?: ExactFilter<string> & PrefixFilter
     age?: OrdFilter<number>
@@ -37,42 +34,31 @@ interface UserQuery extends Query<User> {
 }
 
 const user1: User = {
-  data: {
-    name: 'Trevor',
-    age: 47,
-  },
-  meta: { createdAt: 'yesterday' },
-  key: 'u1',
+  name: 'Trevor',
+  age: 47,
+  createdAt: 'yesterday',
+  id: 'u1',
 }
 
 const user2: User = {
-  data: {
-    name: 'Whatever',
-    age: 15,
-  },
-  meta: { createdAt: 'today' },
-  key: 'u2',
+  name: 'Whatever',
+  age: 15,
+  createdAt: 'today',
+  id: 'u2',
 }
 
-const user3: User = {
-  data: {
-    name: 'Eternal',
-    age: null,
-  },
-  meta: { createdAt: 'now' },
-  key: 'u3',
-}
+const user3: User = { name: 'Eternal', age: null, createdAt: 'now', id: 'u3' }
 
-const store = new InMemoryStore<User, UserQuery>({
-  getItemKey: ({ key }) => key,
+const store = new InMemoryStore<User, UserKey, UserQuery>({
+  getItemKey: ({ id }) => id,
   getFilterPredicates: function* ({ filter }) {
     if (filter) {
       if (filter.name !== undefined) {
-        yield item => exactPredicate(filter.name!)(item.data.name)
-        yield item => prefixPredicate(filter.name!)(item.data.name)
+        yield item => exactPredicate(filter.name!)(item.name)
+        yield item => prefixPredicate(filter.name!)(item.name)
       }
       if (filter.age !== undefined) {
-        yield item => ordPredicate(filter.age!)(item.data.age)
+        yield item => ordPredicate(filter.age!)(item.age)
       }
     }
   },

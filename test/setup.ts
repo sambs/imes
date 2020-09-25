@@ -37,7 +37,7 @@ export interface EventMeta {
   time: string
 }
 
-export type EventKey = string
+export type EventKey = { id: string }
 
 export type EventName = BaseEventName<EventTypes>
 
@@ -48,6 +48,10 @@ export type Event<N extends EventName = EventName> = BaseEvent<
   N
 >
 
+export const getEventKey = <E extends Event<any>>({ id }: E): EventKey => ({
+  id,
+})
+
 export type EmitResult<N extends EventName> = BaseEmitResult<
   EventTypes,
   EventMeta,
@@ -57,6 +61,7 @@ export type EmitResult<N extends EventName> = BaseEmitResult<
 >
 
 export interface PostData {
+  id: string
   title: string
   score: number
   published: boolean
@@ -67,18 +72,14 @@ export type PostKey = string
 export interface PostMeta {
   createdAt: string
   createdBy: string
-  eventKeys: EventKey[]
+  eventIds: string[]
   updatedAt: string
   updatedBy: string
 }
 
-export interface Post {
-  data: PostData
-  meta: PostMeta
-  key: PostKey
-}
+export type Post = PostData & PostMeta
 
-export interface PostQuery extends Query<Post> {
+export interface PostQuery extends Query<PostKey> {
   filter?: {
     title?: ExactFilter<string> & PrefixFilter
     published?: ExactFilter<boolean>
@@ -90,20 +91,21 @@ export interface PostStoreOptions {
   items?: Post[]
 }
 
-export class PostStore extends InMemoryStore<Post, PostQuery> {
+export class PostStore extends InMemoryStore<Post, PostKey, PostQuery> {
   constructor(options?: PostStoreOptions) {
     super({
+      getItemKey: ({ id }) => id,
       getFilterPredicates: function* ({ filter }) {
         if (filter) {
           if (filter.published !== undefined) {
-            yield item => exactPredicate(filter.published!)(item.data.published)
+            yield item => exactPredicate(filter.published!)(item.published)
           }
           if (filter.title !== undefined) {
-            yield item => exactPredicate(filter.title!)(item.data.title)
-            yield item => prefixPredicate(filter.title!)(item.data.title)
+            yield item => exactPredicate(filter.title!)(item.title)
+            yield item => prefixPredicate(filter.title!)(item.title)
           }
           if (filter.score !== undefined) {
-            yield item => ordPredicate(filter.score!)(item.data.score)
+            yield item => ordPredicate(filter.score!)(item.score)
           }
         }
       },
@@ -113,7 +115,7 @@ export class PostStore extends InMemoryStore<Post, PostQuery> {
 }
 
 export interface PostProjectionOptions {
-  store: QueryableStore<Post, PostQuery>
+  store: QueryableStore<Post, PostKey, PostQuery>
 }
 
 export class PostProjection extends Projection<
@@ -121,21 +123,22 @@ export class PostProjection extends Projection<
   EventMeta,
   EventKey,
   Post,
+  PostKey,
+  PostMeta,
   PostQuery
 > {
   constructor(options: PostProjectionOptions) {
     super({
       handlers: {
         PostCreated: {
-          init: ({ data: { id, ...data } }) => ({
+          init: ({ payload }) => ({
             published: false,
             score: 0,
-            ...data,
+            ...payload,
           }),
-          key: ({ data: { id } }) => id,
         },
         PostPublished: {
-          selectOne: ({ data: { id } }) => id,
+          selectOne: ({ payload: { id } }) => id,
           transform: (_, post) => ({ ...post, published: true }),
         },
         AllPostsPublished: {
@@ -143,18 +146,18 @@ export class PostProjection extends Projection<
           transform: (_, post) => ({ ...post, published: true }),
         },
       },
-      initMeta: ({ key, meta: { actorId } }) => ({
+      initMeta: event => ({
         createdAt: 'now',
-        createdBy: actorId,
-        eventKeys: [key],
+        createdBy: event.actorId,
+        eventIds: [event.id],
         updatedAt: 'now',
-        updatedBy: actorId,
+        updatedBy: event.actorId,
       }),
-      updateMeta: ({ key, meta: { actorId } }, { eventKeys, ...meta }) => ({
+      updateMeta: (event, { eventIds, ...meta }) => ({
         ...meta,
-        eventKeys: [...eventKeys, key],
+        eventIds: [...eventIds, event.id],
         updatedAt: 'now',
-        updatedBy: actorId,
+        updatedBy: event.actorId,
       }),
       ...options,
     })
@@ -166,7 +169,7 @@ type Projections = {
 }
 
 interface EventsOptions {
-  store: Store<Event>
+  store: Store<Event, EventKey>
   projections: Projections
 }
 
@@ -185,8 +188,16 @@ export class Events extends BaseEvents<
       getMeta: (name, context) => {
         return { name, time: getTime(), ...context }
       },
-      getKey: (_name, _context) => generateId(),
+      getKey: (_name, _context) => ({ id: generateId() }),
       ...options,
+    })
+  }
+}
+
+export class EventStore extends InMemoryStore<Event, EventKey, {}> {
+  constructor() {
+    super({
+      getItemKey: getEventKey,
     })
   }
 }
