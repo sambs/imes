@@ -1,115 +1,70 @@
 import { Readable } from 'stream'
 import { Store } from './store'
 
-export type Event<
-  T, // { [EventName: string]: EventPayload }
-  M extends {}, // { name: string } // meta - must include and name property
-  K extends {}, // key - for examples { id: string }
-  N extends EventName<T> = EventName<T>
-> = EventPayload<T, N> & EventMeta<T, M, N> & K
+export type Event = { name: string }
 
-export type EventName<T> = keyof T
+export type EventName<E extends Event> = E['name']
 
-export type EventData<T, N extends EventName<T> = EventName<T>> = T[N]
-
-export type EventPayload<T, N extends EventName<T>> = {
-  payload: EventData<T, N>
-}
-
-export type EventMeta<T, M, N extends EventName<T> = EventName<T>> = M & {
+export type EventByName<E extends Event, N extends EventName<E>> = E extends {
   name: N
 }
+  ? E
+  : never
 
-export interface EventHandler<T, M, K, I> {
-  handleEvent(event: Event<T, M, K>): Promise<I>
+export interface EventHandler<E extends Event, I> {
+  handleEvent(event: E): Promise<I>
 }
 
 export type EventHandlerResult<
-  J extends EventHandler<any, any, any, any>
-> = J extends EventHandler<any, any, any, infer R> ? R : never
+  J extends EventHandler<any, any>
+> = J extends EventHandler<any, infer R> ? R : never
 
-export type Projections<T, M, K> = {
-  [key: string]: EventHandler<T, M, K, any>
+export type Projections<E extends Event> = {
+  [key: string]: EventHandler<E, any>
 }
 
-export type ProjectionUpdates<T, M, K, P extends Projections<T, M, K>> = {
+export type ProjectionUpdates<E extends Event, P extends Projections<E>> = {
   [A in keyof P]: EventHandlerResult<P[A]>
 }
 
-export interface EmitResult<
-  T,
-  M,
-  K,
-  P extends Projections<T, M, K>,
-  N extends EventName<T>
-> {
-  event: Event<T, M, K, N>
-  updates: ProjectionUpdates<T, M, K, P>
+export interface EmitResult<E extends Event, P extends Projections<E>> {
+  event: E
+  updates: ProjectionUpdates<E, P>
 }
 
-export interface PostEmit<T, M, K, P extends Projections<T, M, K>> {
-  <N extends EventName<T>>(event: EmitResult<T, M, K, P, N>): void
+export interface PostEmit<E extends Event, P extends Projections<E>> {
+  (event: EmitResult<E, P>): void
 }
 
-export interface EventEmitter<T, M, K, P extends Projections<T, M, K>, C> {
-  emit<N extends EventName<T>>(
-    name: N,
-    data: EventData<T, N>,
-    context: C
-  ): Promise<EmitResult<T, M, K, P, N>>
+export interface IEventEmitter<E extends Event, P extends Projections<E>> {
+  emit(event: E): Promise<EmitResult<E, P>>
 }
 
-export type EventStore<T, M, K> = Store<Event<T, M, K, EventName<T>>, K>
+export type EventStore<E extends Event, K> = Store<E, K>
 
-export interface EventStorer<T, M, K> {
-  store: EventStore<T, M, K>
+export interface IEventStorer<E extends Event, K> {
+  store: EventStore<E, K>
 }
 
-export type GetKey<T, K, C> = <N extends EventName<T>>(
-  name: N,
-  data: EventData<T, N>,
-  context: C
-) => K
-
-export type GetMeta<T, M, C> = <N extends EventName<T>>(
-  name: N,
-  context: C
-) => EventMeta<T, M, N>
-
-export interface EventsOptions<T, M, K, P extends Projections<T, M, K>, C> {
-  getKey: GetKey<T, K, C>
-  getMeta: GetMeta<T, M, C>
-  postEmit?: PostEmit<T, M, K, P>
+export interface EventsOptions<E extends Event, K, P extends Projections<E>> {
+  postEmit?: PostEmit<E, P>
   projections: P
-  store: EventStore<T, M, K>
+  store: EventStore<E, K>
 }
 
-export class Events<T, M, K, P extends Projections<T, M, K>, C>
-  implements EventEmitter<T, M, K, P, C>, EventStorer<T, M, K> {
-  getKey: GetKey<T, K, C>
-  getMeta: GetMeta<T, M, C>
-  postEmit?: PostEmit<T, M, K, P>
+export class Events<E extends Event, K, P extends Projections<E>>
+  implements IEventEmitter<E, P>, IEventStorer<E, K> {
+  postEmit?: PostEmit<E, P>
   projections: P
-  store: EventStore<T, M, K>
+  store: EventStore<E, K>
 
-  constructor({
-    getKey,
-    getMeta,
-    postEmit,
-    projections,
-    store,
-  }: EventsOptions<T, M, K, P, C>) {
-    this.getKey = getKey
-    this.getMeta = getMeta
+  constructor({ postEmit, projections, store }: EventsOptions<E, K, P>) {
     this.postEmit = postEmit
     this.projections = projections
     this.store = store
   }
 
-  async load(
-    events: Readable | Iterable<Event<T, M, K>>,
-    options?: { write: boolean }
-  ) {
+  async load(events: Readable | Iterable<E>, options?: { write: boolean }) {
     options = { write: false, ...options }
 
     for await (const event of events) {
@@ -121,40 +76,32 @@ export class Events<T, M, K, P extends Projections<T, M, K>, C>
     }
   }
 
-  async emit<N extends EventName<T>>(
-    name: N,
-    payload: EventData<T, N>,
-    context: C
-  ): Promise<EmitResult<T, M, K, P, N>> {
-    const event = {
-      payload,
-      ...this.getMeta(name, context),
-      ...this.getKey(name, payload, context),
-    }
-
+  async emit<N extends EventName<E>>(
+    event: EventByName<E, N>
+  ): Promise<EmitResult<EventByName<E, N>, P>> {
     await this.store.create(event)
 
     const updates = await this.updateProjections(event)
 
     if (this.postEmit !== undefined) {
       process.nextTick(() => {
-        this.postEmit!<N>({ event, updates })
+        this.postEmit!({ event, updates })
       })
     }
 
     return { event, updates }
   }
 
-  async updateProjections<N extends EventName<T>>(
-    event: Event<T, M, K, N>
-  ): Promise<ProjectionUpdates<T, M, K, P>> {
-    let updates: Partial<ProjectionUpdates<T, M, K, P>> = {}
+  async updateProjections<N extends EventName<E>>(
+    event: EventByName<E, N>
+  ): Promise<ProjectionUpdates<E, P>> {
+    let updates: Partial<ProjectionUpdates<E, P>> = {}
 
     // Todo: parallelize
     for (let key in this.projections) {
       const projection = this.projections[key]
       updates[key] = await projection.handleEvent(event)
     }
-    return updates as ProjectionUpdates<T, M, K, P>
+    return updates as ProjectionUpdates<E, P>
   }
 }

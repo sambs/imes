@@ -1,15 +1,17 @@
 import test from 'tape'
 import { Readable } from 'stream'
 
+import { EmitResult } from '../src'
+
 import {
-  EmitResult,
-  Event,
+  EventType,
   Events,
-  EventName,
   EventStore,
   PostProjection,
   PostStore,
   Post,
+  Projections,
+  event as buildEvent,
 } from './setup'
 
 const context = { actorId: 'u1' }
@@ -19,13 +21,14 @@ const eventData = {
   title: 'Event Sourcing Explained',
 }
 
-const event: Event = {
+const event: EventType = {
   actorId: 'u1',
   id: 'e0',
   name: 'PostCreated',
   payload: eventData,
   time: 't0',
 }
+
 const post: Post = {
   createdAt: 'now',
   createdBy: 'u1',
@@ -39,7 +42,7 @@ const post: Post = {
 }
 
 type TestEventsOptions = {
-  postEmit?: <N extends EventName>(result: EmitResult<N>) => void
+  postEmit?: (result: EmitResult<EventType, Projections>) => void
 }
 
 const setup = (options?: TestEventsOptions) => {
@@ -58,12 +61,14 @@ const setup = (options?: TestEventsOptions) => {
 test('Events.emit', async t => {
   const { events, posts } = setup()
 
-  const result = await events.emit('PostCreated', eventData, context)
+  const result = await events.emit(
+    buildEvent('PostCreated', eventData, context)
+  )
 
   t.deepEqual(result, { event, updates: { posts: [post] } })
 
   t.deepEqual(await posts.store.get('p1'), post)
-  t.deepEqual(await events.store.get({ id: 'e0' }), event)
+  t.deepEqual(await events.store.get('e0'), event)
 
   t.end()
 })
@@ -78,7 +83,7 @@ test('Events.postEmit', async t => {
     },
   })
 
-  await events.emit('PostCreated', eventData, context)
+  await events.emit(buildEvent('PostCreated', eventData, context))
 
   await new Promise(process.nextTick)
 })
@@ -91,7 +96,7 @@ test('Events.load', async t => {
   t.deepEqual(await posts.store.get('p1'), post, 'populates projections')
 
   t.deepEqual(
-    await events.store.get({ id: 'e0' }),
+    await events.store.get('e0'),
     undefined,
     'does not write the event to the Events store'
   )
@@ -107,7 +112,7 @@ test('Events.load with write option', async t => {
   await events.load(stream, { write: true })
 
   t.deepEqual(
-    await events.store.get({ id: 'e0' }),
+    await events.store.get('e0'),
     event,
     'writes the event to the Events store'
   )

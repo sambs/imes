@@ -1,8 +1,7 @@
 import {
-  Event as BaseEvent,
   Events as BaseEvents,
-  EmitResult as BaseEmitResult,
-  EventName as BaseEventName,
+  EventName,
+  EventByName,
   ExactFilter,
   InMemoryStore,
   OrdFilter,
@@ -20,45 +19,59 @@ export interface Context {
   actorId: string
 }
 
-export interface EventTypes {
-  PostCreated: {
-    id: string
-    title: string
-  }
-  PostPublished: {
-    id: string
-  }
-  AllPostsPublished: undefined
-}
-
-export interface EventMeta {
-  actorId: string
-  name: string
+type Event<N extends string, P = undefined> = {
+  id: string
+  name: N
+  payload: P
   time: string
+  actorId: string
 }
 
-export type EventKey = { id: string }
+export type EventType =
+  | Event<
+      'PostCreated',
+      {
+        id: string
+        title: string
+      }
+    >
+  | Event<
+      'PostPublished',
+      {
+        id: string
+      }
+    >
+  | Event<'AllPostsPublished'>
 
-export type EventName = BaseEventName<EventTypes>
+export type EventKey = string
 
-export type Event<N extends EventName = EventName> = BaseEvent<
-  EventTypes,
-  EventMeta,
-  EventKey,
+type EventPayload<N extends EventName<EventType>> = EventByName<
+  EventType,
   N
->
+>['payload']
 
-export const getEventKey = <E extends Event<any>>({ id }: E): EventKey => ({
-  id,
+export const event = <N extends EventName<EventType>>(
+  name: N,
+  payload: EventByName<EventType, N>['payload'],
+  { actorId }: Context
+): EventByName<EventType, N> => ({
+  id: '123',
+  name,
+  time: 'now',
+  actorId,
+  payload,
 })
 
-export type EmitResult<N extends EventName> = BaseEmitResult<
-  EventTypes,
-  EventMeta,
-  EventKey,
-  Projections,
-  N
->
+const postCreated = event(
+  'PostCreated',
+  {
+    id: 'e0',
+    title: 'Hey',
+  },
+  { actorId: 'a1' }
+)
+
+export const getEventKey = ({ id }: EventType) => id
 
 export interface PostData {
   id: string
@@ -119,7 +132,7 @@ export interface PostProjectionOptions {
 }
 
 export class PostProjection extends Projection<
-  Event,
+  EventType,
   Post,
   PostKey,
   PostMeta,
@@ -132,7 +145,7 @@ export class PostProjection extends Projection<
           init: ({ payload }) => ({
             published: false,
             score: 0,
-            ...event.payload,
+            ...payload,
           }),
         },
         PostPublished: {
@@ -162,45 +175,25 @@ export class PostProjection extends Projection<
   }
 }
 
-type Projections = {
+export type Projections = {
   posts: PostProjection
 }
 
-interface EventsOptions {
-  store: Store<Event, EventKey>
+export interface EventsOptions {
+  store: Store<EventType, EventKey>
   projections: Projections
 }
 
-export class Events extends BaseEvents<
-  EventTypes,
-  EventMeta,
-  EventKey,
-  Projections,
-  Context
-> {
+export class Events extends BaseEvents<EventType, EventKey, Projections> {
   constructor(options: EventsOptions) {
-    const generateId = sequentialIdGenerator('e')
-    const getTime = sequentialIdGenerator('t')
-
-    super({
-      getMeta: (name, context) => {
-        return { name, time: getTime(), ...context }
-      },
-      getKey: (_name, _context) => ({ id: generateId() }),
-      ...options,
-    })
+    super(options)
   }
 }
 
-export class EventStore extends InMemoryStore<Event, EventKey, {}> {
+export class EventStore extends InMemoryStore<EventType, EventKey, {}> {
   constructor() {
     super({
       getItemKey: getEventKey,
     })
   }
-}
-
-const sequentialIdGenerator = (prefix = '') => {
-  let count = 0
-  return () => `${prefix}${count++}`
 }
