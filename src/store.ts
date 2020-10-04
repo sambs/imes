@@ -10,20 +10,20 @@ export interface Store<I extends {}, K> {
   teardown(): Promise<void>
 }
 
-export interface QueryableStore<I extends {}, K, Q extends Query<K>>
+export interface QueryableStore<I extends {}, K, Q extends Query>
   extends Store<I, K> {
-  find(query: Q): Promise<QueryResult<I, K>>
+  find(query: Q): Promise<QueryResult<I>>
 }
 
-export interface Query<K> {
-  cursor?: K | null
+export interface Query {
+  cursor?: string | null
   limit?: number
   filter?: { [field: string]: any }
 }
 
-export interface QueryResult<I extends {}, K> {
+export interface QueryResult<I extends {}> {
   items: Array<I>
-  cursor: K | null
+  cursor: string | null
 }
 
 export type KeyToString<K> = (key: K) => string
@@ -48,7 +48,7 @@ export interface InMemoryStoreOptions<I extends {}, K, Q> {
   getItemKey: GetItemKey<I, K>
 }
 
-export class InMemoryStore<I extends {}, K, Q extends Query<K>>
+export class InMemoryStore<I extends {}, K, Q extends Query>
   implements QueryableStore<I, K, Q> {
   items: { [key: string]: I }
   keyToString: KeyToString<K>
@@ -89,7 +89,7 @@ export class InMemoryStore<I extends {}, K, Q extends Query<K>>
     this.items[stringKey] = item
   }
 
-  async find(query: Q): Promise<QueryResult<I, K>> {
+  async find(query: Q): Promise<QueryResult<I>> {
     let items = Object.values(this.items)
 
     const filterPredicates = Array.from(this.getFilterPredicates(query))
@@ -110,7 +110,11 @@ export class InMemoryStore<I extends {}, K, Q extends Query<K>>
     return []
   }
 
-  protected paginateItems(items: Array<I>, cursor: K | null, limit?: number) {
+  protected paginateItems(
+    items: Array<I>,
+    cursor: string | null,
+    limit?: number
+  ) {
     if (cursor) {
       let found = false
       while (!found && items.length) {
@@ -125,7 +129,9 @@ export class InMemoryStore<I extends {}, K, Q extends Query<K>>
 
     if (typeof limit == 'number' && items.length > limit) {
       items = items.slice(0, limit)
-      cursor = items.length ? this.getItemKey(items.slice(-1)[0]) : null
+      cursor = items.length
+        ? this.keyToString(this.getItemKey(items.slice(-1)[0]))
+        : null
     }
 
     return { items, cursor }

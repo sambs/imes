@@ -26,7 +26,7 @@ interface UserMeta {
 
 type User = UserData & UserMeta
 
-interface UserQuery extends Query<UserKey> {
+interface UserQuery extends Query {
   filter?: {
     name?: ExactFilter<string> & PrefixFilter
     age?: OrdFilter<number>

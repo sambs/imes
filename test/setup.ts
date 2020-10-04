@@ -60,14 +60,14 @@ export type EmitResult<N extends EventName> = BaseEmitResult<
   N
 >
 
+export type PostKey = string
+
 export interface PostData {
   id: string
   title: string
   score: number
   published: boolean
 }
-
-export type PostKey = string
 
 export interface PostMeta {
   createdAt: string
@@ -79,7 +79,7 @@ export interface PostMeta {
 
 export type Post = PostData & PostMeta
 
-export interface PostQuery extends Query<PostKey> {
+export interface PostQuery extends Query {
   filter?: {
     title?: ExactFilter<string> & PrefixFilter
     published?: ExactFilter<boolean>
