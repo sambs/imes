@@ -4,7 +4,7 @@ import { Readable } from 'stream'
 import { EmitResult } from '../src'
 
 import {
-  EventType,
+  Event,
   Events,
   EventStore,
   PostProjection,
@@ -21,7 +21,7 @@ const eventData = {
   title: 'Event Sourcing Explained',
 }
 
-const event: EventType = {
+const event: Event = {
   actorId: 'u1',
   id: 'e0',
   name: 'PostCreated',
@@ -42,7 +42,7 @@ const post: Post = {
 }
 
 type TestEventsOptions = {
-  postEmit?: (result: EmitResult<EventType, Projections>) => void
+  postEmit?: (result: EmitResult<Event, Projections>) => void
 }
 
 const setup = (options?: TestEventsOptions) => {
@@ -54,14 +54,13 @@ const setup = (options?: TestEventsOptions) => {
     store: eventStore,
     ...options,
   })
-
   return { events, posts }
 }
 
 test('Events.emit', async t => {
   const { events, posts } = setup()
 
-  const result = await events.emit(
+  const result = await events.emit<'PostCreated'>(
     buildEvent('PostCreated', eventData, context)
   )
 
