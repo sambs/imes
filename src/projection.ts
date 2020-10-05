@@ -1,8 +1,15 @@
-import { Event, EventMetaBase, EventHandler, EventName } from './events'
 import { QueryableStore } from './store'
 
+import {
+  Event,
+  EventPayloadMap,
+  EventMetaBase,
+  EventHandler,
+  EventName,
+} from './events'
+
 export interface InitHandler<
-  T,
+  T extends EventPayloadMap,
   M extends EventMetaBase<T>,
   N extends EventName<T>,
   I,
@@ -12,7 +19,7 @@ export interface InitHandler<
 }
 
 export interface SingleTransformHandler<
-  T,
+  T extends EventPayloadMap,
   M extends EventMetaBase<T>,
   N extends EventName<T>,
   I,
@@ -23,7 +30,7 @@ export interface SingleTransformHandler<
 }
 
 export interface ManyTransformHandler<
-  T,
+  T extends EventPayloadMap,
   M extends EventMetaBase<T>,
   N extends EventName<T>,
   I,
@@ -34,7 +41,7 @@ export interface ManyTransformHandler<
 }
 
 export type Handler<
-  T,
+  T extends EventPayloadMap,
   M extends EventMetaBase<T>,
   N extends EventName<T>,
   I,
@@ -47,7 +54,7 @@ export type Handler<
   | ManyTransformHandler<T, M, N, I, Q>
 
 export const isInitHandler = <
-  T,
+  T extends EventPayloadMap,
   M extends EventMetaBase<T>,
   N extends EventName<T>,
   I,
@@ -62,7 +69,7 @@ export const isInitHandler = <
 }
 
 export const isSingleTransformHandler = <
-  T,
+  T extends EventPayloadMap,
   M extends EventMetaBase<T>,
   N extends EventName<T>,
   I,
@@ -79,7 +86,7 @@ export const isSingleTransformHandler = <
 }
 
 export const isManyTransformHandler = <
-  T,
+  T extends EventPayloadMap,
   M extends EventMetaBase<T>,
   N extends EventName<T>,
   I,
@@ -95,19 +102,39 @@ export const isManyTransformHandler = <
   )
 }
 
-export type ProjectionHandlers<T, M extends EventMetaBase<T>, I, A, K, Q> = {
+export type ProjectionHandlers<
+  T extends EventPayloadMap,
+  M extends EventMetaBase<T>,
+  I,
+  A,
+  K,
+  Q
+> = {
   [N in EventName<T>]?: Handler<T, M, N, I, A, K, Q>
 }
 
-export interface ProjectionOptions<T, M extends EventMetaBase<T>, I, A, K, Q> {
+export interface ProjectionOptions<
+  T extends EventPayloadMap,
+  M extends EventMetaBase<T>,
+  I,
+  A,
+  K,
+  Q
+> {
   handlers: ProjectionHandlers<T, M, I, A, K, Q>
   initMeta: (event: Event<T, M>) => A
   store: QueryableStore<I, K, Q>
   updateMeta: (event: Event<T, M>, item: I) => A
 }
 
-export class Projection<T, M extends EventMetaBase<T>, I, A, K, Q>
-  implements EventHandler<T, M, Array<I>> {
+export class Projection<
+  T extends EventPayloadMap,
+  M extends EventMetaBase<T>,
+  I,
+  A,
+  K,
+  Q
+> implements EventHandler<T, M, Array<I>> {
   handlers: ProjectionHandlers<T, M, I, A, K, Q>
   initMeta: (event: Event<T, M>) => A
   store: QueryableStore<I, K, Q>

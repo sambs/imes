@@ -2,20 +2,21 @@ import { Readable } from 'stream'
 import { Store } from './store'
 
 export type Event<
-  T, // { [name: string]: EventPayload }
+  T extends EventPayloadMap,
   M extends EventMetaBase<T>,
   N extends EventName<T> = EventName<T>
-> = EventPayload<T, N> & M
+> = { payload: EventPayload<T, N> } & M
 
-export type EventName<T> = keyof T
+export type EventPayloadMap = { [name: string]: any }
 
-export type EventMetaBase<T> = { name: EventName<T> }
+export type EventName<T extends EventPayloadMap> = keyof T
 
-export type EventData<T, N extends EventName<T> = EventName<T>> = T[N]
+export type EventMetaBase<T extends EventPayloadMap> = { name: EventName<T> }
 
-export type EventPayload<T, N extends EventName<T>> = {
-  payload: EventData<T, N>
-}
+export type EventPayload<
+  T extends EventPayloadMap,
+  N extends EventName<T> = EventName<T>
+> = T[N]
 
 export interface EventHandler<T, M extends EventMetaBase<T>, I> {
   handleEvent(event: Event<T, M>): Promise<I>
@@ -30,7 +31,7 @@ export type Projections<T, M extends EventMetaBase<T>> = {
 }
 
 export type ProjectionUpdates<
-  T,
+  T extends EventPayloadMap,
   M extends EventMetaBase<T>,
   P extends Projections<T, M>
 > = {
@@ -38,7 +39,7 @@ export type ProjectionUpdates<
 }
 
 export interface EmitResult<
-  T,
+  T extends EventPayloadMap,
   M extends EventMetaBase<T>,
   P extends Projections<T, M>,
   N extends EventName<T>
@@ -48,7 +49,7 @@ export interface EmitResult<
 }
 
 export interface PostEmit<
-  T,
+  T extends EventPayloadMap,
   M extends EventMetaBase<T>,
   P extends Projections<T, M>
 > {
@@ -56,14 +57,14 @@ export interface PostEmit<
 }
 
 export interface EventEmitter<
-  T,
+  T extends EventPayloadMap,
   M extends EventMetaBase<T>,
   P extends Projections<T, M>,
   C
 > {
   emit<N extends EventName<T>>(
     name: N,
-    data: EventData<T, N>,
+    payload: EventPayload<T, N>,
     context: C
   ): Promise<EmitResult<T, M, P, N>>
 }
@@ -76,7 +77,7 @@ export type GetMeta<T, M extends EventMetaBase<T>, C> = <
 ) => M
 
 export interface EventsOptions<
-  T,
+  T extends EventPayloadMap,
   M extends EventMetaBase<T>,
   K,
   P extends Projections<T, M>,
@@ -89,7 +90,7 @@ export interface EventsOptions<
 }
 
 export class Events<
-  T,
+  T extends EventPayloadMap,
   M extends EventMetaBase<T>,
   K,
   P extends Projections<T, M>,
@@ -129,7 +130,7 @@ export class Events<
 
   async emit<N extends EventName<T>>(
     name: N,
-    payload: EventData<T, N>,
+    payload: EventPayload<T, N>,
     context: C
   ): Promise<EmitResult<T, M, P, N>> {
     const event = {
