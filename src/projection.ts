@@ -1,4 +1,4 @@
-import { QueryableStore } from './store'
+import { Store } from './store'
 
 import {
   Event,
@@ -123,7 +123,7 @@ export interface ProjectionOptions<
 > {
   handlers: ProjectionHandlers<T, M, I, A, K, Q>
   initMeta: (event: Event<T, M>) => A
-  store: QueryableStore<I, K, Q>
+  store: Store<I, K, Q>
   updateMeta: (event: Event<T, M>, item: I) => A
 }
 
@@ -137,7 +137,7 @@ export class Projection<
 > implements EventHandler<T, M, Array<I>> {
   handlers: ProjectionHandlers<T, M, I, A, K, Q>
   initMeta: (event: Event<T, M>) => A
-  store: QueryableStore<I, K, Q>
+  store: Store<I, K, Q>
   updateMeta: (event: Event<T, M>, item: I) => A
 
   constructor({

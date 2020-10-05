@@ -13,7 +13,6 @@ import {
   exactPredicate,
   ordPredicate,
   prefixPredicate,
-  QueryableStore,
 } from '../src'
 
 export interface Context {
@@ -110,7 +109,7 @@ export class PostStore extends InMemoryStore<Post, PostKey, PostQuery> {
 }
 
 export interface PostProjectionOptions {
-  store: QueryableStore<Post, PostKey, PostQuery>
+  store: Store<Post, PostKey, PostQuery>
 }
 
 export class PostProjection extends Projection<

@@ -1,18 +1,14 @@
 import deepEqual from 'deep-equal'
 import sortKeys from 'sort-keys'
 
-export interface Store<I extends {}, K> {
+export interface Store<I extends {}, K, Q extends Query = Query> {
   get(key: K): Promise<I | undefined>
+  find(query: Q): Promise<QueryResult<I>>
   create(item: I): Promise<void>
   update(item: I): Promise<void>
   clear(): Promise<void>
   setup(): Promise<void>
   teardown(): Promise<void>
-}
-
-export interface QueryableStore<I extends {}, K, Q extends Query>
-  extends Store<I, K> {
-  find(query: Q): Promise<QueryResult<I>>
 }
 
 export interface Query {
@@ -49,7 +45,7 @@ export interface InMemoryStoreOptions<I extends {}, K, Q> {
 }
 
 export class InMemoryStore<I extends {}, K, Q extends Query>
-  implements QueryableStore<I, K, Q> {
+  implements Store<I, K, Q> {
   items: { [key: string]: I }
   keyToString: KeyToString<K>
   getItemKey: GetItemKey<I, K>
