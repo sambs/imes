@@ -1,5 +1,5 @@
 import { Readable } from 'stream'
-import { Store } from './store'
+import { Store, Query } from './store'
 
 export type Event<
   T extends EventPayloadMap,
@@ -79,34 +79,36 @@ export type GetMeta<T, M extends EventMetaBase<T>, C> = <
 export interface EventsOptions<
   T extends EventPayloadMap,
   M extends EventMetaBase<T>,
-  K,
   P extends Projections<T, M>,
-  C
+  C, // Emit context
+  K = any, // Event store key
+  Q = Query // Event store query
 > {
   getMeta: GetMeta<T, M, C>
   postEmit?: PostEmit<T, M, P>
   projections: P
-  store: Store<Event<T, M>, K>
+  store: Store<Event<T, M>, K, Q>
 }
 
 export class Events<
   T extends EventPayloadMap,
   M extends EventMetaBase<T>,
-  K,
   P extends Projections<T, M>,
-  C
+  C, // Emit context
+  K = any, // Event store key
+  Q = Query // Event store query
 > implements EventEmitter<T, M, P, C> {
   getMeta: GetMeta<T, M, C>
   postEmit?: PostEmit<T, M, P>
   projections: P
-  store: Store<Event<T, M>, K>
+  store: Store<Event<T, M>, K, Q>
 
   constructor({
     getMeta,
     postEmit,
     projections,
     store,
-  }: EventsOptions<T, M, K, P, C>) {
+  }: EventsOptions<T, M, P, C, K, Q>) {
     this.getMeta = getMeta
     this.postEmit = postEmit
     this.projections = projections

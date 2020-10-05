@@ -169,9 +169,9 @@ interface EventsOptions {
 export class Events extends BaseEvents<
   EventTypes,
   EventMeta,
-  EventKey,
   Projections,
-  Context
+  Context,
+  EventKey
 > {
   constructor(options: EventsOptions) {
     const generateId = sequentialIdGenerator('e')
