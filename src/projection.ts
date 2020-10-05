@@ -1,93 +1,124 @@
-import { Event, EventHandler, EventName } from './events'
+import { Event, EventMetaBase, EventHandler, EventName } from './events'
 import { QueryableStore } from './store'
 
-export interface InitHandler<T, M, K, N extends EventName<T>, I, A> {
-  init: (event: Event<T, M, K, N>) => Omit<I, keyof A>
+export interface InitHandler<
+  T,
+  M extends EventMetaBase<T>,
+  N extends EventName<T>,
+  I,
+  A
+> {
+  init: (event: Event<T, M, N>) => Omit<I, keyof A>
 }
 
-export interface SingleTransformHandler<T, M, K, N extends EventName<T>, I, Y> {
-  selectOne: (event: Event<T, M, K, N>) => Y
-  transform: (event: Event<T, M, K, N>, item: I) => I
+export interface SingleTransformHandler<
+  T,
+  M extends EventMetaBase<T>,
+  N extends EventName<T>,
+  I,
+  K
+> {
+  selectOne: (event: Event<T, M, N>) => K
+  transform: (event: Event<T, M, N>, item: I) => I
 }
 
-export interface ManyTransformHandler<T, M, K, N extends EventName<T>, I, Q> {
-  selectMany: (event: Event<T, M, K, N>) => Q
-  transform: (event: Event<T, M, K, N>, item: I) => I
+export interface ManyTransformHandler<
+  T,
+  M extends EventMetaBase<T>,
+  N extends EventName<T>,
+  I,
+  Q
+> {
+  selectMany: (event: Event<T, M, N>) => Q
+  transform: (event: Event<T, M, N>, item: I) => I
 }
 
-export type Handler<T, M, K, N extends EventName<T>, I, Y, A, Q> =
-  | InitHandler<T, M, K, N, I, A>
-  | SingleTransformHandler<T, M, K, N, I, Y>
-  | ManyTransformHandler<T, M, K, N, I, Q>
+export type Handler<
+  T,
+  M extends EventMetaBase<T>,
+  N extends EventName<T>,
+  I,
+  A,
+  K,
+  Q
+> =
+  | InitHandler<T, M, N, I, A>
+  | SingleTransformHandler<T, M, N, I, K>
+  | ManyTransformHandler<T, M, N, I, Q>
 
-export const isInitHandler = <T, M, K, N extends EventName<T>, I, Y, A, Q>(
-  handler: Handler<T, M, K, N, I, Y, A, Q> | undefined
-): handler is InitHandler<T, M, K, N, I, A> => {
+export const isInitHandler = <
+  T,
+  M extends EventMetaBase<T>,
+  N extends EventName<T>,
+  I,
+  A,
+  K,
+  Q
+>(
+  handler: Handler<T, M, N, I, A, K, Q> | undefined
+): handler is InitHandler<T, M, N, I, A> => {
   if (handler === undefined) return false
-  return (handler as InitHandler<T, M, K, N, I, A>).init !== undefined
+  return (handler as InitHandler<T, M, N, I, A>).init !== undefined
 }
 
 export const isSingleTransformHandler = <
   T,
-  M,
-  K,
+  M extends EventMetaBase<T>,
   N extends EventName<T>,
   I,
-  Y,
   A,
+  K,
   Q
 >(
-  handler: Handler<T, M, K, N, I, Y, A, Q> | undefined
-): handler is SingleTransformHandler<T, M, K, N, I, Y> => {
+  handler: Handler<T, M, N, I, A, K, Q> | undefined
+): handler is SingleTransformHandler<T, M, N, I, K> => {
   if (handler === undefined) return false
   return (
-    (handler as SingleTransformHandler<T, M, K, N, I, Y>).selectOne !==
-    undefined
+    (handler as SingleTransformHandler<T, M, N, I, K>).selectOne !== undefined
   )
 }
 
 export const isManyTransformHandler = <
   T,
-  M,
-  K,
+  M extends EventMetaBase<T>,
   N extends EventName<T>,
   I,
-  Y,
   A,
+  K,
   Q
 >(
-  handler: Handler<T, M, K, N, I, Y, A, Q> | undefined
-): handler is ManyTransformHandler<T, M, K, N, I, Q> => {
+  handler: Handler<T, M, N, I, A, K, Q> | undefined
+): handler is ManyTransformHandler<T, M, N, I, Q> => {
   if (handler === undefined) return false
   return (
-    (handler as ManyTransformHandler<T, M, K, N, I, Q>).selectMany !== undefined
+    (handler as ManyTransformHandler<T, M, N, I, Q>).selectMany !== undefined
   )
 }
 
-export type ProjectionHandlers<T, M, K, I, Y, A, Q> = {
-  [N in EventName<T>]?: Handler<T, M, K, N, I, Y, A, Q>
+export type ProjectionHandlers<T, M extends EventMetaBase<T>, I, A, K, Q> = {
+  [N in EventName<T>]?: Handler<T, M, N, I, A, K, Q>
 }
 
-export interface ProjectionOptions<T, M, K, I, Y, A, Q> {
-  handlers: ProjectionHandlers<T, M, K, I, Y, A, Q>
-  initMeta: (event: Event<T, M, K>) => A
-  store: QueryableStore<I, Y, Q>
-  updateMeta: (event: Event<T, M, K>, item: I) => A
+export interface ProjectionOptions<T, M extends EventMetaBase<T>, I, A, K, Q> {
+  handlers: ProjectionHandlers<T, M, I, A, K, Q>
+  initMeta: (event: Event<T, M>) => A
+  store: QueryableStore<I, K, Q>
+  updateMeta: (event: Event<T, M>, item: I) => A
 }
 
-export class Projection<T, M, K, I, Y, A, Q>
-  implements EventHandler<T, M, K, Array<I>> {
-  handlers: ProjectionHandlers<T, M, K, I, Y, A, Q>
-  initMeta: (event: Event<T, M, K>) => A
-  store: QueryableStore<I, Y, Q>
-  updateMeta: (event: Event<T, M, K>, item: I) => A
+export class Projection<T, M extends EventMetaBase<T>, I, A, K, Q>
+  implements EventHandler<T, M, Array<I>> {
+  handlers: ProjectionHandlers<T, M, I, A, K, Q>
+  initMeta: (event: Event<T, M>) => A
+  store: QueryableStore<I, K, Q>
+  updateMeta: (event: Event<T, M>, item: I) => A
 
   constructor({
     initMeta,
     handlers,
     store,
     updateMeta,
-  }: ProjectionOptions<T, M, K, I, Y, A, Q>) {
+  }: ProjectionOptions<T, M, I, A, K, Q>) {
     this.handlers = handlers
     this.initMeta = initMeta
     this.store = store
@@ -95,7 +126,7 @@ export class Projection<T, M, K, I, Y, A, Q>
   }
 
   async handleEvent<N extends EventName<T>>(
-    event: Event<T, M, K, N>
+    event: Event<T, M, N>
   ): Promise<Array<I>> {
     const handler = this.handlers[event.name]
 

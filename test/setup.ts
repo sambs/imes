@@ -31,31 +31,26 @@ export interface EventTypes {
   AllPostsPublished: undefined
 }
 
+export type EventName = BaseEventName<EventTypes>
+
 export interface EventMeta {
   actorId: string
-  name: string
+  id: string
+  name: EventName
   time: string
 }
 
-export type EventKey = { id: string }
-
-export type EventName = BaseEventName<EventTypes>
+export type EventKey = string
 
 export type Event<N extends EventName = EventName> = BaseEvent<
   EventTypes,
   EventMeta,
-  EventKey,
   N
 >
-
-export const getEventKey = <E extends Event<any>>({ id }: E): EventKey => ({
-  id,
-})
 
 export type EmitResult<N extends EventName> = BaseEmitResult<
   EventTypes,
   EventMeta,
-  EventKey,
   Projections,
   N
 >
@@ -121,10 +116,9 @@ export interface PostProjectionOptions {
 export class PostProjection extends Projection<
   EventTypes,
   EventMeta,
-  EventKey,
   Post,
-  PostKey,
   PostMeta,
+  PostKey,
   PostQuery
 > {
   constructor(options: PostProjectionOptions) {
@@ -186,9 +180,8 @@ export class Events extends BaseEvents<
 
     super({
       getMeta: (name, context) => {
-        return { name, time: getTime(), ...context }
+        return { name, id: generateId(), time: getTime(), ...context }
       },
-      getKey: (_name, _context) => ({ id: generateId() }),
       ...options,
     })
   }
@@ -197,7 +190,7 @@ export class Events extends BaseEvents<
 export class EventStore extends InMemoryStore<Event, EventKey, {}> {
   constructor() {
     super({
-      getItemKey: getEventKey,
+      getItemKey: ({ id }) => id,
     })
   }
 }
