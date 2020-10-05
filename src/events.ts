@@ -68,15 +68,6 @@ export interface EventEmitter<
   ): Promise<EmitResult<T, M, P, N>>
 }
 
-export type EventStore<T, M extends EventMetaBase<T>, K> = Store<
-  Event<T, M, EventName<T>>,
-  K
->
-
-export interface EventStorer<T, M extends EventMetaBase<T>, K> {
-  store: EventStore<T, M, K>
-}
-
 export type GetMeta<T, M extends EventMetaBase<T>, C> = <
   N extends EventName<T>
 >(
@@ -94,7 +85,7 @@ export interface EventsOptions<
   getMeta: GetMeta<T, M, C>
   postEmit?: PostEmit<T, M, P>
   projections: P
-  store: EventStore<T, M, K>
+  store: Store<Event<T, M>, K>
 }
 
 export class Events<
@@ -103,11 +94,11 @@ export class Events<
   K,
   P extends Projections<T, M>,
   C
-> implements EventEmitter<T, M, P, C>, EventStorer<T, M, K> {
+> implements EventEmitter<T, M, P, C> {
   getMeta: GetMeta<T, M, C>
   postEmit?: PostEmit<T, M, P>
   projections: P
-  store: EventStore<T, M, K>
+  store: Store<Event<T, M>, K>
 
   constructor({
     getMeta,
