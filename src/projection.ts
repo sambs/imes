@@ -116,10 +116,10 @@ export type ProjectionHandlers<
 export interface ProjectionOptions<
   T extends EventPayloadMap,
   M extends EventMetaBase<T>,
-  I,
-  A,
-  K,
-  Q
+  I extends A, // Stored item
+  A, // Item meta
+  K, // Item store key
+  Q // Item store query
 > {
   handlers: ProjectionHandlers<T, M, I, A, K, Q>
   initMeta: (event: Event<T, M>) => A
@@ -130,10 +130,10 @@ export interface ProjectionOptions<
 export class Projection<
   T extends EventPayloadMap,
   M extends EventMetaBase<T>,
-  I,
-  A,
-  K,
-  Q
+  I extends A, // Stored item
+  A, // Item meta
+  K, // Item store key
+  Q // Item store query
 > implements EventHandler<T, M, Array<I>> {
   handlers: ProjectionHandlers<T, M, I, A, K, Q>
   initMeta: (event: Event<T, M>) => A
@@ -162,10 +162,10 @@ export class Projection<
     if (handler == undefined) {
       return []
     } else if (isInitHandler(handler)) {
-      const item = ({
+      const item = {
         ...handler.init(event),
         ...this.initMeta(event),
-      } as unknown) as I
+      } as I
       items = [item]
       await this.store.create(item)
     } else {
