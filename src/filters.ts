@@ -14,30 +14,48 @@ export type OrdFilter<T> = {
 
 export type PrefixFilter = { prefix?: string }
 
-export const exactPredicate = <T>({ eq, ne, in: _in }: ExactFilter<T>) => (
-  x: T | null | undefined
-) => {
-  if (x === undefined || x === null) return false
-  if (eq !== undefined && x !== eq) return false
-  if (ne !== undefined && x === ne) return false
-  if (_in !== undefined && !_in.includes(x)) return false
-  else return true
-}
+export const eqPredicate = <I, T>(pick: (item: I) => T) => (x: T) => (
+  item: I
+) => pick(item) === x
 
-export const ordPredicate = <T>({ eq, gt, lt, gte, lte }: OrdFilter<T>) => (
-  x: T | null | undefined
-) => {
-  if (x === undefined || x === null) return false
-  if (eq !== undefined && x !== eq) return false
-  if (gt !== undefined && x <= gt) return false
-  if (gte !== undefined && x < gte) return false
-  if (lt !== undefined && x >= lt) return false
-  if (lte !== undefined && x > lte) return false
-  else return true
-}
+export const nePredicate = <I, T>(pick: (item: I) => T) => (x: T) => (
+  item: I
+) => pick(item) !== x
 
-export const prefixPredicate = ({ prefix }: PrefixFilter) => (x?: string) => {
-  if (x === undefined || x === null) return false
-  if (prefix === undefined) return true
-  else return x.startsWith(prefix)
-}
+export const inPredicate = <I, T>(pick: (item: I) => T) => (x: T[]) => (
+  item: I
+) => x.includes(pick(item))
+
+export const gtPredicate = <I, T>(pick: (item: I) => T) => (x: T) => (
+  item: I
+) => pick(item) > x
+
+export const gtePredicate = <I, T>(pick: (item: I) => T) => (x: T) => (
+  item: I
+) => pick(item) >= x
+
+export const ltPredicate = <I, T>(pick: (item: I) => T) => (x: T) => (
+  item: I
+) => pick(item) < x
+
+export const ltePredicate = <I, T>(pick: (item: I) => T) => (x: T) => (
+  item: I
+) => pick(item) <= x
+
+export const prefixPredicate = <I>(pick: (item: I) => string) => (
+  x: string
+) => (item: I) => pick(item).startsWith(x)
+
+export const exactPredicates = <I, T>(pick: (item: I) => T) => ({
+  eq: eqPredicate(pick),
+  ne: nePredicate(pick),
+  in: inPredicate(pick),
+})
+
+export const ordPredicates = <I, T>(pick: (item: I) => T) => ({
+  eq: eqPredicate(pick),
+  gt: gtPredicate(pick),
+  gte: gtePredicate(pick),
+  lt: ltPredicate(pick),
+  lte: ltePredicate(pick),
+})

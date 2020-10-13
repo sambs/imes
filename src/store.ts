@@ -30,15 +30,19 @@ export interface QueryResult<I extends {}> {
   cursor: string | null
 }
 
-export type KeyToString<K> = (key: K) => string
+type FilterFieldPredicates<I, Q extends Query, F = Required<Q['filter']>> = {
+  [N in keyof F]: FieldPredicates<I, F[N]>
+}
+
+type FieldPredicates<I, N extends { [comparator: string]: any }> = {
+  [O in keyof Required<N>]: FieldPredicate<I, Exclude<N[O], undefined>>
+}
+
+type FieldPredicate<I, T> = (v: T) => (item: I) => boolean
 
 export type GetItemKey<I extends {}, K> = (item: I) => K
 
-export type FilterPredicate<I> = (item: I) => boolean
-
-export type GetFilterPredicates<I, Q> = (
-  query: Q
-) => Iterable<FilterPredicate<I>>
+export type KeyToString<K> = (key: K) => string
 
 export const defaultKeyToString = (key: any) => {
   if (typeof key == 'string') return key
@@ -47,7 +51,7 @@ export const defaultKeyToString = (key: any) => {
 
 export interface InMemoryStoreOptions<I extends {}, K, Q> {
   items?: Array<I>
-  getFilterPredicates?: GetFilterPredicates<I, Q>
+  filters: FilterFieldPredicates<I, Q>
   keyToString?: KeyToString<K>
   getItemKey: GetItemKey<I, K>
 }
@@ -55,16 +59,15 @@ export interface InMemoryStoreOptions<I extends {}, K, Q> {
 export class InMemoryStore<I extends {}, K, Q extends Query>
   implements Store<I, K, Q> {
   items: { [key: string]: I }
+  filters: FilterFieldPredicates<I, Q>
   keyToString: KeyToString<K>
   getItemKey: GetItemKey<I, K>
 
   constructor(options: InMemoryStoreOptions<I, K, Q>) {
     this.items = {}
+    this.filters = options.filters
     this.getItemKey = options.getItemKey
     this.keyToString = options.keyToString || defaultKeyToString
-
-    if (options.getFilterPredicates)
-      this.getFilterPredicates = options.getFilterPredicates
 
     if (options.items) {
       options.items.forEach(item => {
@@ -96,22 +99,21 @@ export class InMemoryStore<I extends {}, K, Q extends Query>
   async find(query: Q): Promise<QueryResult<I>> {
     let items = Object.values(this.items)
 
-    const filterPredicates = Array.from(this.getFilterPredicates(query))
-
-    if (filterPredicates.length) {
-      items = items.filter(item =>
-        filterPredicates.reduce(
-          (pass: boolean, predicate) => pass && predicate(item),
-          true
-        )
-      )
+    if (query.filter) {
+      for (const field in this.filters) {
+        if (query.filter[field]) {
+          for (const operator in this.filters[field]) {
+            if (operator in query.filter[field]!) {
+              items = items.filter(
+                this.filters[field][operator](query.filter[field]![operator])
+              )
+            }
+          }
+        }
+      }
     }
 
     return this.paginateItems(items, query.cursor || null, query.limit)
-  }
-
-  getFilterPredicates(_query: Q): Iterable<FilterPredicate<I>> {
-    return []
   }
 
   protected paginateItems(

@@ -10,8 +10,8 @@ import {
   Projection,
   Query,
   Store,
-  exactPredicate,
-  ordPredicate,
+  exactPredicates,
+  ordPredicates,
   prefixPredicate,
 } from '../src'
 
@@ -89,19 +89,13 @@ export class PostStore extends InMemoryStore<Post, PostKey, PostQuery> {
   constructor(options?: PostStoreOptions) {
     super({
       getItemKey: ({ id }) => id,
-      getFilterPredicates: function* ({ filter }) {
-        if (filter) {
-          if (filter.published !== undefined) {
-            yield item => exactPredicate(filter.published!)(item.published)
-          }
-          if (filter.title !== undefined) {
-            yield item => exactPredicate(filter.title!)(item.title)
-            yield item => prefixPredicate(filter.title!)(item.title)
-          }
-          if (filter.score !== undefined) {
-            yield item => ordPredicate(filter.score!)(item.score)
-          }
-        }
+      filters: {
+        title: {
+          ...exactPredicates(({ title }) => title),
+          prefix: prefixPredicate(({ title }) => title),
+        },
+        score: ordPredicates(({ score }) => score),
+        published: exactPredicates(({ published }) => published),
       },
       ...options,
     })
@@ -190,6 +184,7 @@ export class EventStore extends InMemoryStore<Event, EventKey, {}> {
   constructor() {
     super({
       getItemKey: ({ id }) => id,
+      filters: {},
     })
   }
 }

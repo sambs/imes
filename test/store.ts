@@ -6,8 +6,8 @@ import {
   OrdFilter,
   PrefixFilter,
   Query,
-  exactPredicate,
-  ordPredicate,
+  exactPredicates,
+  ordPredicates,
   prefixPredicate,
   defaultKeyToString,
 } from '../src'
@@ -51,16 +51,12 @@ const user3: User = { name: 'Eternal', age: null, createdAt: 'now', id: 'u3' }
 
 const store = new InMemoryStore<User, UserKey, UserQuery>({
   getItemKey: ({ id }) => id,
-  getFilterPredicates: function* ({ filter }) {
-    if (filter) {
-      if (filter.name !== undefined) {
-        yield item => exactPredicate(filter.name!)(item.name)
-        yield item => prefixPredicate(filter.name!)(item.name)
-      }
-      if (filter.age !== undefined) {
-        yield item => ordPredicate(filter.age!)(item.age)
-      }
-    }
+  filters: {
+    name: {
+      ...exactPredicates(({ name }) => name),
+      prefix: prefixPredicate(({ name }) => name),
+    },
+    age: ordPredicates(({ age }) => age),
   },
   items: [user1, user2, user3],
 })
@@ -119,13 +115,13 @@ test('InMemoryStore.find', async t => {
   t.deepEqual(
     await store.find({ filter: { age: { gt: 21 } } }),
     { items: [user1], cursor: null },
-    'filters items by a size predicate'
+    'filters items by an ord predicate'
   )
 
   t.deepEqual(
     await store.find({ filter: { age: { gt: 11, lte: 15 } } }),
     { items: [user2], cursor: null },
-    'filters items by a multiple size predicates'
+    'filters items by multiple ord predicates'
   )
 
   t.end()
