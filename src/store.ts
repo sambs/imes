@@ -14,7 +14,15 @@ export interface Store<I extends {}, K, Q extends Query = Query> {
 export interface Query {
   cursor?: string | null
   limit?: number
-  filter?: { [field: string]: any }
+  filter?: QueryFilterFields
+}
+
+export type QueryFilterFields = {
+  [field: string]: QueryFilterField | undefined
+}
+
+export type QueryFilterField = {
+  [operator: string]: any
 }
 
 export interface QueryResult<I extends {}> {
