@@ -1,7 +1,7 @@
 {
   "name": "imes",
   "description": "In-memory event sourcing",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "license": "MIT",
   "main": "dist/src/index.js",
   "types": "dist/src/index.d.ts",
@@ -13,7 +13,9 @@
     "test": "tape -r ts-node/register test/**/*.ts",
     "test-w": "onchange -i 'src/**/*.ts' -- yarn test"
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "dependencies": {
     "deep-equal": "^2.0.1",
     "sort-keys": "^4.0.0"
