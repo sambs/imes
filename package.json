@@ -13,6 +13,7 @@
     "test": "tape -r ts-node/register test/**/*.ts",
     "test-w": "onchange -i 'src/**/*.ts' -- yarn test"
   },
+  "files": ["dist"],
   "dependencies": {
     "deep-equal": "^2.0.1",
     "sort-keys": "^4.0.0"
