@@ -1,7 +1,7 @@
 {
   "name": "imes",
   "description": "In-memory event sourcing",
-  "version": "0.12.0",
+  "version": "0.13.0",
   "license": "MIT",
   "main": "dist/src/index.js",
   "types": "dist/src/index.d.ts",
