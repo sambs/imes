@@ -26,6 +26,7 @@ export type QueryFilterField = {
 }
 
 export interface QueryResult<I extends {}> {
+  edges: Array<{ cursor: string; node: I }>
   items: Array<I>
   cursor: string | null
 }
@@ -133,14 +134,22 @@ export class InMemoryStore<I extends {}, K, Q extends Query>
       cursor = null
     }
 
-    if (typeof limit == 'number' && items.length > limit) {
+    const hasMore = typeof limit == 'number' && items.length > limit
+
+    if (hasMore) {
       items = items.slice(0, limit)
-      cursor = items.length
-        ? this.keyToString(this.getItemKey(items.slice(-1)[0]))
-        : null
     }
 
-    return { items, cursor }
+    const edges = items.map(item => ({
+      cursor: this.keyToString(this.getItemKey(item)),
+      node: item,
+    }))
+
+    if (hasMore) {
+      cursor = edges.slice(-1)[0].cursor
+    }
+
+    return { cursor, edges, items }
   }
 
   async clear() {

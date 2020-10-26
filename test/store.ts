@@ -76,19 +76,38 @@ test('InMemoryStore.get', async t => {
 test('InMemoryStore.find', async t => {
   t.deepEqual(
     await store.find({}),
-    { items: [user1, user2, user3], cursor: null },
+    {
+      cursor: null,
+      edges: [
+        { cursor: 'u1', node: user1 },
+        { cursor: 'u2', node: user2 },
+        { cursor: 'u3', node: user3 },
+      ],
+      items: [user1, user2, user3],
+    },
     'returns a QueryResult'
   )
 
   t.deepEqual(
     await store.find({ cursor: 'u1' }),
-    { items: [user2, user3], cursor: null },
+    {
+      cursor: null,
+      edges: [
+        { cursor: 'u2', node: user2 },
+        { cursor: 'u3', node: user3 },
+      ],
+      items: [user2, user3],
+    },
     'returns items after the provided cursor'
   )
 
   t.deepEqual(
     await store.find({ limit: 1 }),
-    { items: [user1], cursor: 'u1' },
+    {
+      cursor: 'u1',
+      edges: [{ cursor: 'u1', node: user1 }],
+      items: [user1],
+    },
     'returns a cursor when a limit is provided and there are more items'
   )
 
@@ -102,25 +121,41 @@ test('InMemoryStore.find', async t => {
 
   t.deepEqual(
     await store.find({ filter: { name: { eq: 'Trevor' } } }),
-    { items: [user1], cursor: null },
+    {
+      cursor: null,
+      edges: [{ cursor: 'u1', node: user1 }],
+      items: [user1],
+    },
     'filters items by equality'
   )
 
   t.deepEqual(
     await store.find({ filter: { name: { prefix: 'Wh' } } }),
-    { items: [user2], cursor: null },
+    {
+      cursor: null,
+      edges: [{ cursor: 'u2', node: user2 }],
+      items: [user2],
+    },
     'filters items by prefix'
   )
 
   t.deepEqual(
     await store.find({ filter: { age: { gt: 21 } } }),
-    { items: [user1], cursor: null },
+    {
+      cursor: null,
+      edges: [{ cursor: 'u1', node: user1 }],
+      items: [user1],
+    },
     'filters items by an ord predicate'
   )
 
   t.deepEqual(
     await store.find({ filter: { age: { gt: 11, lte: 15 } } }),
-    { items: [user2], cursor: null },
+    {
+      cursor: null,
+      edges: [{ cursor: 'u2', node: user2 }],
+      items: [user2],
+    },
     'filters items by multiple ord predicates'
   )
 
