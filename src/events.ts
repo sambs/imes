@@ -115,18 +115,25 @@ export class Events<
     this.store = store
   }
 
+  /**
+   * Load existing events, populating projections
+   *
+   * @param {Stream<Event>|Event[]} events - Events to load
+   * @param {Object} [options]
+   * @param {Boolean} [options.write=false] - Whether to also write the event to the event store
+   * @param {String[]=} [options.projections] - When present, only populate the specified projections
+   */
   async load(
     events: Readable | Iterable<Event<T, M>>,
-    options?: { write: boolean }
+    options?: { write?: boolean; projections?: Array<keyof P> }
   ) {
     options = { write: false, ...options }
 
     for await (const event of events) {
-      await this.updateProjections(event)
-
       if (options.write) {
         await this.store.create(event)
       }
+      await this.updateProjections(event, options.projections)
     }
   }
 
@@ -154,14 +161,17 @@ export class Events<
   }
 
   async updateProjections<N extends EventName<T>>(
-    event: Event<T, M, N>
+    event: Event<T, M, N>,
+    projections?: Array<keyof P> //
   ): Promise<ProjectionUpdates<T, M, P>> {
     let updates: Partial<ProjectionUpdates<T, M, P>> = {}
 
     // Todo: parallelize
     for (let key in this.projections) {
-      const projection = this.projections[key]
-      updates[key] = await projection.handleEvent(event)
+      if (!projections || projections.includes(key)) {
+        const projection = this.projections[key]
+        updates[key] = await projection.handleEvent(event)
+      }
     }
     return updates as ProjectionUpdates<T, M, P>
   }
