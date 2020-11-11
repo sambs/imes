@@ -162,17 +162,22 @@ export class Events<
 
   async updateProjections<N extends EventName<T>>(
     event: Event<T, M, N>,
-    projections?: Array<keyof P> //
+    only?: Array<keyof P>
   ): Promise<ProjectionUpdates<T, M, P>> {
-    let updates: Partial<ProjectionUpdates<T, M, P>> = {}
+    const jobs: Array<Promise<[keyof P, any]>> = []
 
-    // Todo: parallelize
-    for (let key in this.projections) {
-      if (!projections || projections.includes(key)) {
-        const projection = this.projections[key]
-        updates[key] = await projection.handleEvent(event)
-      }
+    for (let name in this.projections) {
+      jobs.push(
+        !only || only.includes(name)
+          ? this.projections[name]
+              .handleEvent(event)
+              .then(result => [name, result])
+          : Promise.resolve([name, []])
+      )
     }
+
+    const updates = Object.fromEntries(await Promise.all(jobs))
+
     return updates as ProjectionUpdates<T, M, P>
   }
 }
