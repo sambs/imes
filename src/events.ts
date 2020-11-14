@@ -137,15 +137,23 @@ export class Events<
     }
   }
 
+  build<N extends EventName<T>>(
+    name: N,
+    payload: EventPayload<T, N>,
+    context: C
+  ): Event<T, M, N> {
+    return {
+      ...this.getMeta(name, context),
+      payload,
+    }
+  }
+
   async emit<N extends EventName<T>>(
     name: N,
     payload: EventPayload<T, N>,
     context: C
   ): Promise<EmitResult<T, M, P, N>> {
-    const event = {
-      payload,
-      ...this.getMeta(name, context),
-    }
+    const event = this.build(name, payload, context)
 
     await this.store.create(event)
 

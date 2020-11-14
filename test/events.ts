@@ -14,7 +14,7 @@ import {
 
 const context = { actorId: 'u1' }
 
-const eventData = {
+const payload = {
   id: 'p1',
   title: 'Event Sourcing Explained',
 }
@@ -23,9 +23,10 @@ const event: Event = {
   actorId: 'u1',
   id: 'e0',
   name: 'PostCreated',
-  payload: eventData,
+  payload,
   time: 't0',
 }
+
 const post: Post = {
   createdAt: 'now',
   createdBy: 'u1',
@@ -55,10 +56,18 @@ const setup = (options?: TestEventsOptions) => {
   return { events, posts }
 }
 
+test('Events.build', t => {
+  const { events } = setup()
+
+  t.deepEqual(events.build('PostCreated', payload, context), event)
+
+  t.end()
+})
+
 test('Events.emit', async t => {
   const { events, posts } = setup()
 
-  const result = await events.emit('PostCreated', eventData, context)
+  const result = await events.emit('PostCreated', payload, context)
 
   t.deepEqual(result, { event, updates: { posts: [post] } })
 
@@ -78,7 +87,7 @@ test('Events.postEmit', async t => {
     },
   })
 
-  await events.emit('PostCreated', eventData, context)
+  await events.emit('PostCreated', payload, context)
 
   await new Promise(process.nextTick)
 })
