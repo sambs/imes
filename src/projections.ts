@@ -113,7 +113,7 @@ export type ProjectionHandlers<
   [N in EventName<T>]?: Handler<T, M, N, I, A, K, Q>
 }
 
-export type ProjectionChanges<I> = Array<{ current: I; previous?: I }>
+export type ProjectionUpdates<I> = Array<{ current: I; previous?: I }>
 
 export interface ProjectionOptions<
   T extends EventPayloadMap,
@@ -154,9 +154,9 @@ export class Projection<
     this.updateMeta = updateMeta
   }
 
-  async getChanges<N extends EventName<T>>(
+  async getUpdates<N extends EventName<T>>(
     event: Event<T, M, N>
-  ): Promise<ProjectionChanges<I>> {
+  ): Promise<ProjectionUpdates<I>> {
     const handler = this.handlers[event.name]
 
     if (handler == undefined) {
@@ -191,24 +191,95 @@ export class Projection<
     }
   }
 
-  async writeChanges<N extends EventName<T>>(
+  async writeUpdates<N extends EventName<T>>(
     event: Event<T, M, N>
-  ): Promise<ProjectionChanges<I>> {
-    const changes = await this.getChanges(event)
+  ): Promise<ProjectionUpdates<I>> {
+    const updates = await this.getUpdates(event)
 
     await Promise.all(
-      changes.map(({ previous, current }) =>
+      updates.map(({ previous, current }) =>
         previous ? this.store.update(current) : this.store.create(current)
       )
     )
 
-    return changes
+    return updates
   }
 
   async handleEvent<N extends EventName<T>>(
     event: Event<T, M, N>
   ): Promise<Array<I>> {
-    const changes = await this.writeChanges(event)
-    return changes.map(({ current }) => current)
+    const updates = await this.writeUpdates(event)
+    return updates.map(({ current }) => current)
   }
 }
+
+export type ProjectionMap<
+  T extends EventPayloadMap,
+  M extends EventMetaBase<T>
+> = {
+  [key: string]: Projection<T, M, any, any, any, any>
+}
+
+export type InferProjectionItem<
+  P extends Projection<any, any, any, any, any, any>
+> = P extends Projection<any, any, infer I, any, any, any> ? I : never
+
+export type ProjectionUpdatesMap<P extends ProjectionMap<any, any>> = {
+  [N in keyof P]: ProjectionUpdates<InferProjectionItem<P[N]>>
+}
+
+export type FlatProjectionUpdatesMap<P extends ProjectionMap<any, any>> = {
+  [N in keyof P]: Array<InferProjectionItem<P[N]>>
+}
+
+export async function getProjectionUpdates<
+  T extends EventPayloadMap,
+  M extends EventMetaBase<T>,
+  P extends ProjectionMap<T, M>,
+  N extends EventName<T> = EventName<T>
+  // E extends Event<T, M> = Event<T, M>
+>(projections: P, event: Event<T, M, N>): Promise<ProjectionUpdatesMap<P>> {
+  const jobs: Array<Promise<[keyof P, any]>> = []
+
+  for (let name in projections) {
+    jobs.push(
+      projections[name].getUpdates(event).then(result => [name, result])
+    )
+  }
+
+  const updates = Object.fromEntries(await Promise.all(jobs))
+
+  return updates as ProjectionUpdatesMap<P>
+}
+
+export async function writeProjectionUpdates<
+  T extends EventPayloadMap,
+  M extends EventMetaBase<T>,
+  P extends ProjectionMap<T, M>,
+  N extends EventName<T> = EventName<T>
+>(projections: P, event: Event<T, M, N>): Promise<ProjectionUpdatesMap<P>> {
+  const jobs: Array<Promise<[keyof P, any]>> = []
+
+  for (let name in projections) {
+    jobs.push(
+      projections[name].writeUpdates(event).then(result => [name, result])
+    )
+  }
+
+  const updates = Object.fromEntries(await Promise.all(jobs))
+
+  return updates as ProjectionUpdatesMap<P>
+}
+
+export const flattenProjectionUpdates = <I>(updates: ProjectionUpdates<I>) =>
+  updates.map(({ current }) => current)
+
+export const flattenProjectionUpdatesMap = <P extends ProjectionMap<any, any>>(
+  updates: ProjectionUpdatesMap<P>
+) =>
+  Object.fromEntries(
+    Object.entries(updates).map(([name, updates]) => [
+      name,
+      flattenProjectionUpdates(updates),
+    ])
+  ) as FlatProjectionUpdatesMap<P>

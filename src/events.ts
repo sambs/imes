@@ -26,11 +26,11 @@ export type EventHandlerResult<
   J extends EventHandler<any, any, any>
 > = J extends EventHandler<any, any, infer R> ? R : never
 
-export type Projections<T, M extends EventMetaBase<T>> = {
+type Projections<T, M extends EventMetaBase<T>> = {
   [key: string]: EventHandler<T, M, any>
 }
 
-export type ProjectionUpdates<
+type ProjectionUpdates<
   T extends EventPayloadMap,
   M extends EventMetaBase<T>,
   P extends Projections<T, M>
