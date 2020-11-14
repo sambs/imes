@@ -1,8 +1,7 @@
 import {
   Event as BaseEvent,
-  Events as BaseEvents,
-  EmitResult as BaseEmitResult,
   EventName as BaseEventName,
+  EventPayload as BaseEventPayload,
   ExactFilter,
   InMemoryStore,
   OrdFilter,
@@ -32,6 +31,11 @@ export interface EventTypes {
 
 export type EventName = BaseEventName<EventTypes>
 
+export type EventPayload<N extends EventName = EventName> = BaseEventPayload<
+  EventTypes,
+  N
+>
+
 export interface EventMeta {
   actorId: string
   id: string
@@ -44,13 +48,6 @@ export type EventKey = string
 export type Event<N extends EventName = EventName> = BaseEvent<
   EventTypes,
   EventMeta,
-  N
->
-
-export type EmitResult<N extends EventName> = BaseEmitResult<
-  EventTypes,
-  EventMeta,
-  Projections,
   N
 >
 
@@ -151,35 +148,6 @@ export class PostProjection extends Projection<
   }
 }
 
-type Projections = {
-  posts: PostProjection
-}
-
-interface EventsOptions {
-  store: Store<Event, EventKey>
-  projections: Projections
-}
-
-export class Events extends BaseEvents<
-  EventTypes,
-  EventMeta,
-  Projections,
-  Context,
-  EventKey
-> {
-  constructor(options: EventsOptions) {
-    const generateId = sequentialIdGenerator('e')
-    const getTime = sequentialIdGenerator('t')
-
-    super({
-      getMeta: (name, context) => {
-        return { name, id: generateId(), time: getTime(), ...context }
-      },
-      ...options,
-    })
-  }
-}
-
 export class EventStore extends InMemoryStore<Event, EventKey, {}> {
   constructor() {
     super({
@@ -187,9 +155,4 @@ export class EventStore extends InMemoryStore<Event, EventKey, {}> {
       filters: {},
     })
   }
-}
-
-const sequentialIdGenerator = (prefix = '') => {
-  let count = 0
-  return () => `${prefix}${count++}`
 }

@@ -1,12 +1,5 @@
+import { Event, EventPayloadMap, EventMetaBase, EventName } from './events'
 import { Store } from './store'
-
-import {
-  Event,
-  EventPayloadMap,
-  EventMetaBase,
-  EventHandler,
-  EventName,
-} from './events'
 
 export interface InitHandler<
   T extends EventPayloadMap,
@@ -136,7 +129,7 @@ export class Projection<
   A, // Item meta
   K, // Item store key
   Q // Item store query
-> implements EventHandler<T, M, Array<I>> {
+> {
   handlers: ProjectionHandlers<T, M, I, A, K, Q>
   initMeta: (event: Event<T, M>) => A
   store: Store<I, K, Q>
@@ -204,13 +197,6 @@ export class Projection<
 
     return updates
   }
-
-  async handleEvent<N extends EventName<T>>(
-    event: Event<T, M, N>
-  ): Promise<Array<I>> {
-    const updates = await this.writeUpdates(event)
-    return updates.map(({ current }) => current)
-  }
 }
 
 export type ProjectionMap<
@@ -237,7 +223,6 @@ export async function getProjectionUpdates<
   M extends EventMetaBase<T>,
   P extends ProjectionMap<T, M>,
   N extends EventName<T> = EventName<T>
-  // E extends Event<T, M> = Event<T, M>
 >(projections: P, event: Event<T, M, N>): Promise<ProjectionUpdatesMap<P>> {
   const jobs: Array<Promise<[keyof P, any]>> = []
 
