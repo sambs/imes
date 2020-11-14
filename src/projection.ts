@@ -113,6 +113,8 @@ export type ProjectionHandlers<
   [N in EventName<T>]?: Handler<T, M, N, I, A, K, Q>
 }
 
+export type ProjectionChanges<I> = Array<{ current: I; previous?: I }>
+
 export interface ProjectionOptions<
   T extends EventPayloadMap,
   M extends EventMetaBase<T>,
@@ -152,23 +154,25 @@ export class Projection<
     this.updateMeta = updateMeta
   }
 
-  async handleEvent<N extends EventName<T>>(
+  async getChanges<N extends EventName<T>>(
     event: Event<T, M, N>
-  ): Promise<Array<I>> {
+  ): Promise<ProjectionChanges<I>> {
     const handler = this.handlers[event.name]
-
-    let items: Array<I> = []
 
     if (handler == undefined) {
       return []
     } else if (isInitHandler(handler)) {
-      const item = {
-        ...handler.init(event),
-        ...this.initMeta(event),
-      } as I
-      items = [item]
-      await this.store.create(item)
+      return [
+        {
+          current: {
+            ...handler.init(event),
+            ...this.initMeta(event),
+          } as I,
+        },
+      ]
     } else {
+      let items: Array<I> = []
+
       if (isSingleTransformHandler(handler)) {
         const item = await this.store.get(handler.selectOne(event))
         if (item !== undefined) items = [item]
@@ -176,12 +180,35 @@ export class Projection<
         const connection = await this.store.find(handler.selectMany(event))
         items = connection.items
       }
-      items = items
-        .map(item => handler.transform(event, item))
-        .map(item => ({ ...item, ...this.updateMeta(event, item) }))
-      await Promise.all(items.map(item => this.store.update(item)))
-    }
 
-    return items
+      return items.map(item => {
+        const transformed = handler.transform(event, item)
+        return {
+          previous: item,
+          current: { ...transformed, ...this.updateMeta(event, transformed) },
+        }
+      })
+    }
+  }
+
+  async writeChanges<N extends EventName<T>>(
+    event: Event<T, M, N>
+  ): Promise<ProjectionChanges<I>> {
+    const changes = await this.getChanges(event)
+
+    await Promise.all(
+      changes.map(({ previous, current }) =>
+        previous ? this.store.update(current) : this.store.create(current)
+      )
+    )
+
+    return changes
+  }
+
+  async handleEvent<N extends EventName<T>>(
+    event: Event<T, M, N>
+  ): Promise<Array<I>> {
+    const changes = await this.writeChanges(event)
+    return changes.map(({ current }) => current)
   }
 }
