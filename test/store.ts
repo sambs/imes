@@ -1,5 +1,3 @@
-import test from 'tape'
-
 import {
   ExactFilter,
   InMemoryStore,
@@ -61,112 +59,80 @@ const store = new InMemoryStore<User, UserKey, UserQuery>({
   items: [user1, user2, user3],
 })
 
-test('InMemoryStore.get', async t => {
-  t.deepEqual(await store.get('u1'), user1, 'returns a stored item')
+test('InMemoryStore.get', async () => {
+  //'returns a stored item'
+  expect(await store.get('u1')).toEqual(user1)
 
-  t.equal(
-    await store.get('dne'),
-    undefined,
-    'returns undefined when asked for a non-existant key'
-  )
-
-  t.end()
+  // 'returns undefined when asked for a non-existant key'
+  expect(await store.get('dne')).toBeUndefined()
 })
 
-test('InMemoryStore.find', async t => {
-  t.deepEqual(
-    await store.find({}),
-    {
-      cursor: null,
-      edges: [
-        { cursor: 'u1', node: user1 },
-        { cursor: 'u2', node: user2 },
-        { cursor: 'u3', node: user3 },
-      ],
-      items: [user1, user2, user3],
-    },
-    'returns a QueryResult'
-  )
-
-  t.deepEqual(
-    await store.find({ cursor: 'u1' }),
-    {
-      cursor: null,
-      edges: [
-        { cursor: 'u2', node: user2 },
-        { cursor: 'u3', node: user3 },
-      ],
-      items: [user2, user3],
-    },
-    'returns items after the provided cursor'
-  )
-
-  t.deepEqual(
-    await store.find({ limit: 1 }),
-    {
-      cursor: 'u1',
-      edges: [{ cursor: 'u1', node: user1 }],
-      items: [user1],
-    },
-    'returns a cursor when a limit is provided and there are more items'
-  )
-
-  await store.find({ cursor: 'u4' }).catch(error => {
-    t.equal(
-      error.message,
-      'Invalid cursor',
-      'errors when a provided cursor is invalid'
-    )
+test('InMemoryStore.find', async () => {
+  // returns a QueryResult
+  expect(await store.find({})).toEqual({
+    cursor: null,
+    edges: [
+      { cursor: 'u1', node: user1 },
+      { cursor: 'u2', node: user2 },
+      { cursor: 'u3', node: user3 },
+    ],
+    items: [user1, user2, user3],
   })
 
-  t.deepEqual(
-    await store.find({ filter: { name: { eq: 'Trevor' } } }),
-    {
-      cursor: null,
-      edges: [{ cursor: 'u1', node: user1 }],
-      items: [user1],
-    },
-    'filters items by equality'
-  )
+  // returns items after the provided cursor
+  expect(await store.find({ cursor: 'u1' })).toEqual({
+    cursor: null,
+    edges: [
+      { cursor: 'u2', node: user2 },
+      { cursor: 'u3', node: user3 },
+    ],
+    items: [user2, user3],
+  })
 
-  t.deepEqual(
-    await store.find({ filter: { name: { prefix: 'Wh' } } }),
-    {
-      cursor: null,
-      edges: [{ cursor: 'u2', node: user2 }],
-      items: [user2],
-    },
-    'filters items by prefix'
-  )
+  // returns a cursor when a limit is provided and there are more items
+  expect(await store.find({ limit: 1 })).toEqual({
+    cursor: 'u1',
+    edges: [{ cursor: 'u1', node: user1 }],
+    items: [user1],
+  })
 
-  t.deepEqual(
-    await store.find({ filter: { age: { gt: 21 } } }),
-    {
-      cursor: null,
-      edges: [{ cursor: 'u1', node: user1 }],
-      items: [user1],
-    },
-    'filters items by an ord predicate'
-  )
+  // errors when a provided cursor is invalid
+  await store.find({ cursor: 'u4' }).catch(error => {
+    expect(error.message).toEqual('Invalid cursor')
+  })
 
-  t.deepEqual(
-    await store.find({ filter: { age: { gt: 11, lte: 15 } } }),
-    {
-      cursor: null,
-      edges: [{ cursor: 'u2', node: user2 }],
-      items: [user2],
-    },
-    'filters items by multiple ord predicates'
-  )
+  // filters items by equality
+  expect(await store.find({ filter: { name: { eq: 'Trevor' } } })).toEqual({
+    cursor: null,
+    edges: [{ cursor: 'u1', node: user1 }],
+    items: [user1],
+  })
 
-  t.end()
+  // filters items by prefix
+  expect(await store.find({ filter: { name: { prefix: 'Wh' } } })).toEqual({
+    cursor: null,
+    edges: [{ cursor: 'u2', node: user2 }],
+    items: [user2],
+  })
+
+  // filters items by an ord predicate
+  expect(await store.find({ filter: { age: { gt: 21 } } })).toEqual({
+    cursor: null,
+    edges: [{ cursor: 'u1', node: user1 }],
+    items: [user1],
+  })
+
+  // filters items by multiple ord predicates
+  expect(await store.find({ filter: { age: { gt: 11, lte: 15 } } })).toEqual({
+    cursor: null,
+    edges: [{ cursor: 'u2', node: user2 }],
+    items: [user2],
+  })
 })
 
-test('defaultKeyToString', t => {
-  t.equal(
-    defaultKeyToString({ id: 123, pk: 'abc' }),
-    defaultKeyToString({ pk: 'abc', id: 123 }),
-    'returns the same string regardless of the order of an objects keys'
+test('defaultKeyToString', () => {
+  // returns the same string regardless of the order of an objects keys
+  expect(defaultKeyToString({ id: 123, pk: 'abc' })).toEqual(
+    defaultKeyToString({ pk: 'abc', id: 123 })
   )
-  t.end()
 })

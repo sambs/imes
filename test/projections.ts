@@ -1,4 +1,3 @@
-import test from 'tape'
 import { Post, PostStore, PostProjection } from './setup'
 
 const post1: Post = {
@@ -25,7 +24,7 @@ const post2: Post = {
   id: 'p2',
 }
 
-test('projection.writeUpdates with a SingleTransformHandler', async t => {
+test('projection.writeUpdates with a SingleTransformHandler', async () => {
   const store = new PostStore({ items: [post1, post2] })
   const projection = new PostProjection({ store })
 
@@ -49,22 +48,14 @@ test('projection.writeUpdates with a SingleTransformHandler', async t => {
     id: 'p2',
   }
 
-  t.deepEqual(
-    updatedItems,
-    [{ previous: post2, current: expectedItem }],
-    'returns an array of updated items'
-  )
+  // returns an array of updated items
+  expect(updatedItems).toEqual([{ previous: post2, current: expectedItem }])
 
-  t.deepEqual(
-    await projection.store.get('p2'),
-    expectedItem,
-    'updates the item in the projection store'
-  )
-
-  t.end()
+  // updates the item in the projection store
+  expect(await projection.store.get('p2')).toEqual(expectedItem)
 })
 
-test('projection.writeUpdates with a ManyTransformHandler', async t => {
+test('projection.writeUpdates with a ManyTransformHandler', async () => {
   const store = new PostStore({ items: [post1, post2] })
   const projection = new PostProjection({ store })
 
@@ -88,22 +79,14 @@ test('projection.writeUpdates with a ManyTransformHandler', async t => {
     id: 'p2',
   }
 
-  t.deepEqual(
-    updatedItems,
-    [{ previous: post2, current: expectedItem }],
-    'returns an array of updated items'
-  )
+  // returns an array of updated items
+  expect(updatedItems).toEqual([{ previous: post2, current: expectedItem }])
 
-  t.deepEqual(
-    await projection.store.get('p2'),
-    expectedItem,
-    'updates the item in the projection store'
-  )
-
-  t.end()
+  // updates the item in the projection store
+  expect(await projection.store.get('p2')).toEqual(expectedItem)
 })
 
-test('projection.writeUpdates with an InitHandler', async t => {
+test('projection.writeUpdates with an InitHandler', async () => {
   const store = new PostStore({ items: [post1, post2] })
   const projection = new PostProjection({ store })
 
@@ -127,22 +110,14 @@ test('projection.writeUpdates with an InitHandler', async t => {
     id: 'p3',
   }
 
-  t.deepEqual(
-    updatedItems,
-    [{ current: expectedItem }],
-    'returns an array of updated items'
-  )
+  // returns an array of updated items
+  expect(updatedItems).toEqual([{ current: expectedItem }])
 
-  t.deepEqual(
-    await projection.store.get('p3'),
-    expectedItem,
-    'creates the item in the projection store'
-  )
-
-  t.end()
+  // creates the item in the projection store
+  expect(await projection.store.get('p3')).toEqual(expectedItem)
 })
 
-test('projection.getUpdates with an InitHandler', async t => {
+test('projection.getUpdates with an InitHandler', async () => {
   const store = new PostStore({ items: [post1, post2] })
   const projection = new PostProjection({ store })
 
@@ -166,17 +141,9 @@ test('projection.getUpdates with an InitHandler', async t => {
     id: 'p3',
   }
 
-  t.deepEqual(
-    updatedItems,
-    [{ current: expectedItem }],
-    'returns an array of updated items'
-  )
+  // returns an array of updated items
+  expect(updatedItems).toEqual([{ current: expectedItem }])
 
-  t.deepEqual(
-    await projection.store.get('p3'),
-    undefined,
-    'does not persit the item in the projection store'
-  )
-
-  t.end()
+  // does not persit the item in the projection store
+  expect(await projection.store.get('p3')).toBeUndefined()
 })

@@ -1,4 +1,3 @@
-import test from 'tape'
 import { writeProjectionUpdates } from '../src'
 
 import {
@@ -36,7 +35,7 @@ export const emit = async <N extends EventName>(
   return { event, updates }
 }
 
-test('A typical emit function', async t => {
+test('A typical emit function', async () => {
   const context = { actorId: 'u1' }
 
   const payload = {
@@ -66,13 +65,11 @@ test('A typical emit function', async t => {
     updatedBy: 'u1',
   }
 
-  t.deepEqual(result, {
+  expect(result).toEqual({
     event: expectedEvent,
     updates: { posts: [{ current: expectedPost }] },
   })
 
-  t.deepEqual(await posts.store.get('p1'), expectedPost)
-  t.deepEqual(await eventStore.get('e0'), expectedEvent)
-
-  t.end()
+  expect(await posts.store.get('p1')).toEqual(expectedPost)
+  expect(await eventStore.get('e0')).toEqual(expectedEvent)
 })
