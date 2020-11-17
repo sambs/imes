@@ -50,6 +50,10 @@ export abstract class Store<I extends {}, K, Q extends Query = Query> {
 
   abstract get(key: K): Promise<I | undefined>
 
+  async getMany(keys: Array<K>): Promise<Array<I | undefined>> {
+    return Promise.all(keys.map(key => this.get(key)))
+  }
+
   abstract find(query: Q): Promise<QueryResult<I>>
 
   abstract clear(): Promise<void>
