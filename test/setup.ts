@@ -156,3 +156,41 @@ export class EventStore extends InMemoryStore<Event, EventKey, {}> {
     })
   }
 }
+
+const p1: Post = {
+  title: 'Who Ya?',
+  score: 3.4,
+  published: true,
+  createdAt: 'yesterday',
+  createdBy: 'u1',
+  eventIds: ['e1'],
+  updatedAt: 'yesterday',
+  updatedBy: 'u1',
+  id: 'p1',
+}
+
+const p2: Post = {
+  title: 'Whoa Ye!',
+  score: 6.2,
+  published: false,
+  createdAt: 'yesterday',
+  createdBy: 'u2',
+  eventIds: ['e2'],
+  updatedAt: 'yesterday',
+  updatedBy: 'u2',
+  id: 'p2',
+}
+
+const p3: Post = {
+  title: 'Howdy Folks',
+  score: 5.8,
+  published: true,
+  createdAt: 'yesterday',
+  createdBy: 'u1',
+  eventIds: ['e3'],
+  updatedAt: 'yesterday',
+  updatedBy: 'u1',
+  id: 'p3',
+}
+
+export const posts = { p1, p2, p3 }

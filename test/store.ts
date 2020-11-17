@@ -1,67 +1,13 @@
-import {
-  ExactFilter,
-  InMemoryStore,
-  OrdFilter,
-  PrefixFilter,
-  Query,
-  exactPredicates,
-  ordPredicates,
-  prefixPredicate,
-  defaultKeyToString,
-} from '../src'
+import { PostStore, posts } from './setup'
+import { defaultKeyToString } from '../src'
 
-interface UserData {
-  id: string
-  name: string
-  age: number | null
-}
-
-type UserKey = string
-
-interface UserMeta {
-  createdAt: string
-}
-
-type User = UserData & UserMeta
-
-interface UserQuery extends Query {
-  filter?: {
-    name?: ExactFilter<string> & PrefixFilter
-    age?: OrdFilter<number>
-  }
-}
-
-const user1: User = {
-  name: 'Trevor',
-  age: 47,
-  createdAt: 'yesterday',
-  id: 'u1',
-}
-
-const user2: User = {
-  name: 'Whatever',
-  age: 15,
-  createdAt: 'today',
-  id: 'u2',
-}
-
-const user3: User = { name: 'Eternal', age: null, createdAt: 'now', id: 'u3' }
-
-const store = new InMemoryStore<User, UserKey, UserQuery>({
-  getItemKey: ({ id }) => id,
-  filters: {
-    name: {
-      ...exactPredicates(({ name }) => name),
-      prefix: prefixPredicate(({ name }) => name),
-    },
-    age: ordPredicates(({ age }) => age),
-  },
-  items: [user1, user2, user3],
+const store = new PostStore({
+  items: [posts.p1, posts.p2, posts.p3],
 })
 
 test('InMemoryStore.get', async () => {
   //'returns a stored item'
-  expect(await store.get('u1')).toEqual(user1)
+  expect(await store.get('p1')).toEqual(posts.p1)
 
   // 'returns undefined when asked for a non-existant key'
   expect(await store.get('dne')).toBeUndefined()
@@ -72,28 +18,28 @@ test('InMemoryStore.find', async () => {
   expect(await store.find({})).toEqual({
     cursor: null,
     edges: [
-      { cursor: 'u1', node: user1 },
-      { cursor: 'u2', node: user2 },
-      { cursor: 'u3', node: user3 },
+      { cursor: 'p1', node: posts.p1 },
+      { cursor: 'p2', node: posts.p2 },
+      { cursor: 'p3', node: posts.p3 },
     ],
-    items: [user1, user2, user3],
+    items: [posts.p1, posts.p2, posts.p3],
   })
 
   // returns items after the provided cursor
-  expect(await store.find({ cursor: 'u1' })).toEqual({
+  expect(await store.find({ cursor: 'p1' })).toEqual({
     cursor: null,
     edges: [
-      { cursor: 'u2', node: user2 },
-      { cursor: 'u3', node: user3 },
+      { cursor: 'p2', node: posts.p2 },
+      { cursor: 'p3', node: posts.p3 },
     ],
-    items: [user2, user3],
+    items: [posts.p2, posts.p3],
   })
 
   // returns a cursor when a limit is provided and there are more items
   expect(await store.find({ limit: 1 })).toEqual({
-    cursor: 'u1',
-    edges: [{ cursor: 'u1', node: user1 }],
-    items: [user1],
+    cursor: 'p1',
+    edges: [{ cursor: 'p1', node: posts.p1 }],
+    items: [posts.p1],
   })
 
   // errors when a provided cursor is invalid
@@ -102,31 +48,34 @@ test('InMemoryStore.find', async () => {
   })
 
   // filters items by equality
-  expect(await store.find({ filter: { name: { eq: 'Trevor' } } })).toEqual({
+  expect(await store.find({ filter: { published: { eq: false } } })).toEqual({
     cursor: null,
-    edges: [{ cursor: 'u1', node: user1 }],
-    items: [user1],
+    edges: [{ cursor: 'p2', node: posts.p2 }],
+    items: [posts.p2],
   })
 
   // filters items by prefix
-  expect(await store.find({ filter: { name: { prefix: 'Wh' } } })).toEqual({
+  expect(await store.find({ filter: { title: { prefix: 'Wh' } } })).toEqual({
     cursor: null,
-    edges: [{ cursor: 'u2', node: user2 }],
-    items: [user2],
+    edges: [
+      { cursor: 'p1', node: posts.p1 },
+      { cursor: 'p2', node: posts.p2 },
+    ],
+    items: [posts.p1, posts.p2],
   })
 
   // filters items by an ord predicate
-  expect(await store.find({ filter: { age: { gt: 21 } } })).toEqual({
+  expect(await store.find({ filter: { score: { gt: 6 } } })).toEqual({
     cursor: null,
-    edges: [{ cursor: 'u1', node: user1 }],
-    items: [user1],
+    edges: [{ cursor: 'p2', node: posts.p2 }],
+    items: [posts.p2],
   })
 
   // filters items by multiple ord predicates
-  expect(await store.find({ filter: { age: { gt: 11, lte: 15 } } })).toEqual({
+  expect(await store.find({ filter: { score: { gt: 5, lte: 6 } } })).toEqual({
     cursor: null,
-    edges: [{ cursor: 'u2', node: user2 }],
-    items: [user2],
+    edges: [{ cursor: 'p3', node: posts.p3 }],
+    items: [posts.p3],
   })
 })
 

@@ -1,31 +1,7 @@
-import { Post, PostStore, PostProjection } from './setup'
-
-const post1: Post = {
-  title: 'Who Ya?',
-  score: 3.4,
-  published: true,
-  createdAt: 'yesterday',
-  createdBy: 'u1',
-  eventIds: ['e1'],
-  updatedAt: 'yesterday',
-  updatedBy: 'u1',
-  id: 'p1',
-}
-
-const post2: Post = {
-  title: 'Whoa Ye!',
-  score: 6.2,
-  published: false,
-  createdAt: 'yesterday',
-  createdBy: 'u2',
-  eventIds: ['e2'],
-  updatedAt: 'yesterday',
-  updatedBy: 'u2',
-  id: 'p2',
-}
+import { PostStore, PostProjection, posts } from './setup'
 
 test('projection.writeUpdates with a SingleTransformHandler', async () => {
-  const store = new PostStore({ items: [post1, post2] })
+  const store = new PostStore({ items: [posts.p1, posts.p2] })
   const projection = new PostProjection({ store })
 
   const updatedItems = await projection.writeUpdates({
@@ -49,14 +25,14 @@ test('projection.writeUpdates with a SingleTransformHandler', async () => {
   }
 
   // returns an array of updated items
-  expect(updatedItems).toEqual([{ previous: post2, current: expectedItem }])
+  expect(updatedItems).toEqual([{ previous: posts.p2, current: expectedItem }])
 
   // updates the item in the projection store
   expect(await projection.store.get('p2')).toEqual(expectedItem)
 })
 
 test('projection.writeUpdates with a ManyTransformHandler', async () => {
-  const store = new PostStore({ items: [post1, post2] })
+  const store = new PostStore({ items: [posts.p1, posts.p2] })
   const projection = new PostProjection({ store })
 
   const updatedItems = await projection.writeUpdates({
@@ -80,14 +56,14 @@ test('projection.writeUpdates with a ManyTransformHandler', async () => {
   }
 
   // returns an array of updated items
-  expect(updatedItems).toEqual([{ previous: post2, current: expectedItem }])
+  expect(updatedItems).toEqual([{ previous: posts.p2, current: expectedItem }])
 
   // updates the item in the projection store
   expect(await projection.store.get('p2')).toEqual(expectedItem)
 })
 
 test('projection.writeUpdates with an InitHandler', async () => {
-  const store = new PostStore({ items: [post1, post2] })
+  const store = new PostStore({ items: [posts.p1, posts.p2] })
   const projection = new PostProjection({ store })
 
   const updatedItems = await projection.writeUpdates({
@@ -118,7 +94,7 @@ test('projection.writeUpdates with an InitHandler', async () => {
 })
 
 test('projection.getUpdates with an InitHandler', async () => {
-  const store = new PostStore({ items: [post1, post2] })
+  const store = new PostStore({ items: [posts.p1, posts.p2] })
   const projection = new PostProjection({ store })
 
   const updatedItems = await projection.getUpdates({
