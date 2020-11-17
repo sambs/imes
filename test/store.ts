@@ -1,5 +1,4 @@
 import { PostStore, posts } from './setup'
-import { defaultKeyToString } from '../src'
 
 const store = new PostStore({
   items: [posts.p1, posts.p2, posts.p3],
@@ -79,9 +78,11 @@ test('InMemoryStore.find', async () => {
   })
 })
 
-test('defaultKeyToString', () => {
+test('store.keyToString', () => {
   // returns the same string regardless of the order of an objects keys
-  expect(defaultKeyToString({ id: 123, pk: 'abc' })).toEqual(
-    defaultKeyToString({ pk: 'abc', id: 123 })
+  // @ts-ignore
+  expect(store.keyToString({ id: 123, pk: 'abc' })).toEqual(
+    // @ts-ignore
+    store.keyToString({ pk: 'abc', id: 123 })
   )
 })

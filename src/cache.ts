@@ -1,9 +1,5 @@
-import { KeyToString, Query, Store, defaultKeyToString } from './store'
+import { Query, Store } from './store'
 import { ProxyStore } from './proxy'
-
-export interface CacheProxyStoreOptions<K> {
-  keyToString?: KeyToString<K>
-}
 
 export class CacheProxyStore<
   I extends {},
@@ -12,18 +8,11 @@ export class CacheProxyStore<
 > extends ProxyStore<I, K, Q> {
   cache: { [key: string]: I }
   pending: { [key: string]: Promise<I | undefined> }
-  keyToString: KeyToString<K>
 
-  constructor(store: Store<I, K, Q>, options?: CacheProxyStoreOptions<K>) {
+  constructor(store: Store<I, K, Q>) {
     super(store)
     this.cache = {}
     this.pending = {}
-    this.keyToString = options?.keyToString || defaultKeyToString
-  }
-
-  getItemCacheKey(item: I): string {
-    const key = this.getItemKey(item)
-    return this.keyToString(key)
   }
 
   async get(key: K): Promise<I | undefined> {
@@ -50,13 +39,13 @@ export class CacheProxyStore<
   }
 
   async create(item: I): Promise<void> {
-    const cacheKey = this.getItemCacheKey(item)
+    const cacheKey = this.getItemKeyString(item)
     this.cache[cacheKey] = item
     return super.create(item)
   }
 
   async update(item: I): Promise<void> {
-    const cacheKey = this.getItemCacheKey(item)
+    const cacheKey = this.getItemKeyString(item)
     this.cache[cacheKey] = item
     return super.update(item)
   }
