@@ -1,32 +1,24 @@
-import {
-  KeyToString,
-  Query,
-  QueryResult,
-  Store,
-  defaultKeyToString,
-} from './store'
+import { KeyToString, Query, Store, defaultKeyToString } from './store'
+import { ProxyStore } from './proxy'
 
-export interface CacheProxyStoreOptions<I extends {}, K, Q> {
+export interface CacheProxyStoreOptions<K> {
   keyToString?: KeyToString<K>
-  store: Store<I, K, Q>
 }
 
-export class CacheProxyStore<I extends {}, K, Q extends Query>
-  implements Store<I, K, Q> {
+export class CacheProxyStore<
+  I extends {},
+  K,
+  Q extends Query
+> extends ProxyStore<I, K, Q> {
   cache: { [key: string]: I }
   pending: { [key: string]: Promise<I | undefined> }
   keyToString: KeyToString<K>
-  store: Store<I, K, Q>
 
-  constructor(options: CacheProxyStoreOptions<I, K, Q>) {
-    this.store = options.store
+  constructor(store: Store<I, K, Q>, options?: CacheProxyStoreOptions<K>) {
+    super(store)
     this.cache = {}
     this.pending = {}
-    this.keyToString = options.keyToString || defaultKeyToString
-  }
-
-  getItemKey(item: I): K {
-    return this.store.getItemKey(item)
+    this.keyToString = options?.keyToString || defaultKeyToString
   }
 
   getItemCacheKey(item: I): string {
@@ -45,7 +37,7 @@ export class CacheProxyStore<I extends {}, K, Q extends Query>
       return this.pending[cacheKey]
     }
 
-    const itemRequest = this.store.get(key)
+    const itemRequest = super.get(key)
 
     this.pending[cacheKey] = itemRequest
 
@@ -60,17 +52,13 @@ export class CacheProxyStore<I extends {}, K, Q extends Query>
   async create(item: I): Promise<void> {
     const cacheKey = this.getItemCacheKey(item)
     this.cache[cacheKey] = item
-    return this.store.create(item)
+    return super.create(item)
   }
 
   async update(item: I): Promise<void> {
     const cacheKey = this.getItemCacheKey(item)
     this.cache[cacheKey] = item
-    return this.store.update(item)
-  }
-
-  async find(query: Q): Promise<QueryResult<I>> {
-    return this.store.find(query)
+    return super.update(item)
   }
 
   async clearCache() {
@@ -80,14 +68,6 @@ export class CacheProxyStore<I extends {}, K, Q extends Query>
   async clear() {
     this.cache = {}
     this.pending = {}
-    this.store.clear()
-  }
-
-  async setup() {
-    this.store.setup()
-  }
-
-  async teardown() {
-    this.store.teardown()
+    super.clear()
   }
 }

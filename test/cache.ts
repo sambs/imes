@@ -3,7 +3,7 @@ import { PostStore, posts } from './setup'
 
 const setup = () => {
   const wrapped = new PostStore()
-  const store = new CacheProxyStore({ store: wrapped })
+  const store = new CacheProxyStore(wrapped)
   return { store, wrapped }
 }
 
