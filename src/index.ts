@@ -1,3 +1,4 @@
+export * from './cache'
 export * from './events'
 export * from './filters'
 export * from './projections'
