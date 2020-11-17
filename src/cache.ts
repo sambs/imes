@@ -1,5 +1,4 @@
 import {
-  GetItemKey,
   KeyToString,
   Query,
   QueryResult,
@@ -9,7 +8,6 @@ import {
 
 export interface CacheProxyStoreOptions<I extends {}, K, Q> {
   keyToString?: KeyToString<K>
-  getItemKey: GetItemKey<I, K>
   store: Store<I, K, Q>
 }
 
@@ -18,15 +16,17 @@ export class CacheProxyStore<I extends {}, K, Q extends Query>
   cache: { [key: string]: I }
   pending: { [key: string]: Promise<I | undefined> }
   keyToString: KeyToString<K>
-  getItemKey: GetItemKey<I, K>
   store: Store<I, K, Q>
 
   constructor(options: CacheProxyStoreOptions<I, K, Q>) {
     this.store = options.store
     this.cache = {}
     this.pending = {}
-    this.getItemKey = options.getItemKey
     this.keyToString = options.keyToString || defaultKeyToString
+  }
+
+  getItemKey(item: I): K {
+    return this.store.getItemKey(item)
   }
 
   getItemCacheKey(item: I): string {

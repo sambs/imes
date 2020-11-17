@@ -2,13 +2,14 @@ import deepEqual from 'deep-equal'
 import sortKeys from 'sort-keys'
 
 export interface Store<I extends {}, K, Q extends Query = Query> {
-  get(key: K): Promise<I | undefined>
-  find(query: Q): Promise<QueryResult<I>>
-  create(item: I): Promise<void>
-  update(item: I): Promise<void>
   clear(): Promise<void>
+  create(item: I): Promise<void>
+  find(query: Q): Promise<QueryResult<I>>
+  get(key: K): Promise<I | undefined>
+  getItemKey(item: I): K
   setup(): Promise<void>
   teardown(): Promise<void>
+  update(item: I): Promise<void>
 }
 
 export interface Query {
@@ -41,8 +42,6 @@ type FieldPredicates<I, N extends { [comparator: string]: any }> = {
 
 type FieldPredicate<I, T> = (v: T) => (item: I) => boolean
 
-export type GetItemKey<I extends {}, K> = (item: I) => K
-
 export type KeyToString<K> = (key: K) => string
 
 export const defaultKeyToString = (key: any) => {
@@ -53,16 +52,16 @@ export const defaultKeyToString = (key: any) => {
 export interface InMemoryStoreOptions<I extends {}, K, Q> {
   items?: Array<I>
   filters: FilterFieldPredicates<I, Q>
+  getItemKey: (item: I) => K
   keyToString?: KeyToString<K>
-  getItemKey: GetItemKey<I, K>
 }
 
 export class InMemoryStore<I extends {}, K, Q extends Query>
   implements Store<I, K, Q> {
   items: { [key: string]: I }
   filters: FilterFieldPredicates<I, Q>
+  getItemKey: (item: I) => K
   keyToString: KeyToString<K>
-  getItemKey: GetItemKey<I, K>
 
   constructor(options: InMemoryStoreOptions<I, K, Q>) {
     this.items = {}
