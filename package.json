@@ -1,7 +1,7 @@
 {
   "name": "imes",
   "description": "In-memory event sourcing",
-  "version": "0.15.0",
+  "version": "0.16.0",
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -12,7 +12,9 @@
     "prettify": "prettier --write 'src/**/*.ts'",
     "test": "jest"
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "dependencies": {
     "deep-equal": "^2.0.4",
     "sort-keys": "^4.1.0"
