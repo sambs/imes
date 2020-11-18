@@ -1,5 +1,6 @@
 import deepEqual from 'deep-equal'
 import sortKeys from 'sort-keys'
+import { ProxyStore } from './proxy'
 
 export interface Query {
   cursor?: string | null
@@ -61,7 +62,17 @@ export abstract class Store<I extends {}, K, Q extends Query = Query> {
   abstract setup(): Promise<void>
 
   abstract teardown(): Promise<void>
+
+  wrap<P extends ProxyStore<I, K, Q>>(
+    ProxyClass: ProxyStoreConstructor<I, K, Q, P>
+  ): P {
+    return new ProxyClass(this)
+  }
 }
+
+type ProxyStoreConstructor<I, K, Q, P extends ProxyStore<I, K, Q>> = new (
+  store: Store<I, K, Q>
+) => P
 
 export interface InMemoryStoreOptions<I extends {}, K, Q> {
   filters: FilterFieldPredicates<I, Q>

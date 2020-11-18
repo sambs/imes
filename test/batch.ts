@@ -3,7 +3,7 @@ import { PostStore, posts } from './setup'
 
 const setup = () => {
   const wrapped = new PostStore()
-  const store = new BatchProxyStore(wrapped)
+  const store = wrapped.wrap(BatchProxyStore)
   return { store, wrapped }
 }
 
