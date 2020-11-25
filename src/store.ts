@@ -45,9 +45,7 @@ export abstract class Store<I extends {}, K, Q extends Query = Query> {
     return this.keyToString(key)
   }
 
-  abstract create(item: I): Promise<void>
-
-  abstract update(item: I): Promise<void>
+  abstract put(item: I): Promise<void>
 
   abstract get(key: K): Promise<I | undefined>
 
@@ -109,25 +107,17 @@ export class InMemoryStore<I extends {}, K, Q extends Query> extends Store<
     }
   }
 
+  async put(item: I): Promise<void> {
+    const key = this.getItemKeyString(item)
+    this.items[key] = item
+  }
+
   async get(key: K): Promise<I | undefined> {
     return this.items[this.keyToString(key)]
   }
 
   async getMany(keys: Array<K>): Promise<Array<I | undefined>> {
     return keys.map(key => this.items[this.keyToString(key)])
-  }
-
-  async create(item: I): Promise<void> {
-    this.put(item)
-  }
-
-  async update(item: I): Promise<void> {
-    this.put(item)
-  }
-
-  async put(item: I): Promise<void> {
-    const key = this.getItemKeyString(item)
-    this.items[key] = item
   }
 
   async find(query: Q): Promise<QueryResult<I>> {

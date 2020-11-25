@@ -18,6 +18,12 @@ export class CacheProxyStore<
     this.pending = {}
   }
 
+  async put(item: I): Promise<void> {
+    const cacheKey = this.getItemKeyString(item)
+    this.cache[cacheKey] = item
+    return super.put(item)
+  }
+
   async get(key: K): Promise<I | undefined> {
     const cacheKey = this.keyToString(key)
 
@@ -62,18 +68,6 @@ export class CacheProxyStore<
     return keys
       .map(key => this.keyToString(key))
       .map(cacheKey => this.cache[cacheKey])
-  }
-
-  async create(item: I): Promise<void> {
-    const cacheKey = this.getItemKeyString(item)
-    this.cache[cacheKey] = item
-    return super.create(item)
-  }
-
-  async update(item: I): Promise<void> {
-    const cacheKey = this.getItemKeyString(item)
-    this.cache[cacheKey] = item
-    return super.update(item)
   }
 
   async clearCache() {

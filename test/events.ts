@@ -28,7 +28,7 @@ export const emit = async <N extends EventName>(
     time: 't0',
   }
 
-  await eventStore.create(event)
+  await eventStore.put(event)
 
   const updates = await writeProjectionUpdates({ posts }, event)
 

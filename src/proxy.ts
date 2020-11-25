@@ -20,20 +20,16 @@ export class ProxyStore<I extends {}, K, Q extends Query> extends Store<
     return this.store.keyToString(key)
   }
 
+  async put(item: I): Promise<void> {
+    return this.store.put(item)
+  }
+
   async get(key: K): Promise<I | undefined> {
     return this.store.get(key)
   }
 
   async getMany(keys: Array<K>): Promise<Array<I | undefined>> {
     return this.store.getMany(keys)
-  }
-
-  async create(item: I): Promise<void> {
-    return this.store.create(item)
-  }
-
-  async update(item: I): Promise<void> {
-    return this.store.update(item)
   }
 
   async find(query: Q): Promise<QueryResult<I>> {

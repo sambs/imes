@@ -7,27 +7,13 @@ const setup = () => {
   return { store, wrapped }
 }
 
-test('CacheProxyStore.create', async () => {
+test('CacheProxyStore.put', async () => {
   const { store, wrapped } = setup()
 
-  // Calls _create
-  wrapped.create = jest.fn()
-  await store.create(posts.p1)
-  expect(wrapped.create).toHaveBeenCalledWith(posts.p1)
-
-  // Populates the cache
-  wrapped.get = jest.fn()
-  expect(await store.get('p1')).toEqual(posts.p1)
-  expect(wrapped.get).not.toBeCalled()
-})
-
-test('CacheProxyStore.update', async () => {
-  const { store, wrapped } = setup()
-
-  // Calls update
-  wrapped.update = jest.fn()
-  await store.update(posts.p1)
-  expect(wrapped.update).toHaveBeenCalledWith(posts.p1)
+  // Calls put
+  wrapped.put = jest.fn()
+  await store.put(posts.p1)
+  expect(wrapped.put).toHaveBeenCalledWith(posts.p1)
 
   // Populates the cache
   wrapped.get = jest.fn()

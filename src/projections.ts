@@ -188,13 +188,7 @@ export class Projection<
     event: Event<T, M, N>
   ): Promise<ProjectionUpdates<I>> {
     const updates = await this.getUpdates(event)
-
-    await Promise.all(
-      updates.map(({ previous, current }) =>
-        previous ? this.store.update(current) : this.store.create(current)
-      )
-    )
-
+    await Promise.all(updates.map(({ current }) => this.store.put(current)))
     return updates
   }
 }
